@@ -1,0 +1,25 @@
+#game-board {
+    display: grid;
+    grid-template-columns: repeat(4, 60px);
+    gap: 2px;
+    margin: 20px auto;
+    width: 248px;
+}
+
+.cell {
+    width: 60px;
+    height: 60px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+#status {
+    text-align: center;
+    font-size: 18px;
+    margin-top: 10px;
+}
