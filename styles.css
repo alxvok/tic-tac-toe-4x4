@@ -33,7 +33,7 @@ body {
 
 #game-board {
     display: grid;
-    grid-template-columns: repeat(4, 80px);
+    grid-template-columns: repeat(6, 60px); /* 6 столбцов для поля 6x6 */
     gap: 5px;
     background-color: #222; /* Тёмный фон для сетки */
     padding: 10px;
@@ -42,14 +42,14 @@ body {
 }
 
 .cell {
-    width: 80px;
-    height: 80px;
+    width: 60px; /* Уменьшенный размер ячеек */
+    height: 60px;
     background-color: #fff; /* Белый фон ячеек */
     border-radius: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
+    font-size: 28px; /* Уменьшенный шрифт для ячеек */
     font-weight: bold;
     color: #333;
     cursor: pointer;
