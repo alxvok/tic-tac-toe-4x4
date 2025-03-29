@@ -1,11 +1,11 @@
-const board = Array(4).fill().map(() => Array(4).fill(null));
+const board = Array(6).fill().map(() => Array(6).fill(null)); // Поле 6x6
 let currentPlayer = 'X';
 let playerWins = 0; // Счётчик побед игрока
 let botWins = 0; // Счётчик побед бота
 
 const gameBoard = document.getElementById('game-board');
-for (let i = 0; i < 4; i++) {
-  for (let j = 0; j < 4; j++) {
+for (let i = 0; i < 6; i++) {
+  for (let j = 0; j < 6; j++) {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.row = i;
@@ -29,7 +29,7 @@ function makeMove(row, col) {
       }
       updateScore();
       setTimeout(resetGame, 2000);
-      return; // Завершаем ход, чтобы не продолжать
+      return; // Завершаем ход
     }
     // Проверяем на ничью сразу после хода
     if (board.flat().every(cell => cell !== null)) {
@@ -48,8 +48,8 @@ function makeMove(row, col) {
 
 function botMove() {
   // 1. Проверка на победу бота
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
+  for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 6; j++) {
       if (board[i][j] === null) {
         board[i][j] = 'O'; // Симулируем ход
         if (checkWin('O')) {
@@ -67,8 +67,8 @@ function botMove() {
   }
 
   // 2. Блокировка игрока
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
+  for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 6; j++) {
       if (board[i][j] === null) {
         board[i][j] = 'X'; // Симулируем ход игрока
         if (checkWin('X')) {
@@ -89,7 +89,7 @@ function botMove() {
   }
 
   // 3. Стратегический ход (приоритет — центр)
-  const centerMoves = [[1, 1], [1, 2], [2, 1], [2, 2]];
+  const centerMoves = [[2, 2], [2, 3], [3, 2], [3, 3]]; // Центр для поля 6x6
   for (let [i, j] of centerMoves) {
     if (board[i][j] === null) {
       board[i][j] = 'O';
@@ -140,18 +140,42 @@ function updateUI() {
 }
 
 function checkWin(player) {
-  // Проверка горизонталей
-  for (let i = 0; i < 4; i++) {
-    if (board[i].every(cell => cell === player)) return true;
+  // Проверка горизонталей (нужно 4 в ряд)
+  for (let i = 0; i < 6; i++) {
+    for (let j = 0; j <= 6 - 4; j++) { // Проверяем отрезки длиной 4
+      if (board[i][j] === player && board[i][j + 1] === player && board[i][j + 2] === player && board[i][j + 3] === player) {
+        return true;
+      }
+    }
   }
-  // Проверка вертикалей
-  for (let j = 0; j < 4; j++) {
-    if (board.every(row => row[j] === player)) return true;
+
+  // Проверка вертикалей (нужно 4 в ряд)
+  for (let j = 0; j < 6; j++) {
+    for (let i = 0; i <= 6 - 4; i++) {
+      if (board[i][j] === player && board[i + 1][j] === player && board[i + 2][j] === player && board[i + 3][j] === player) {
+        return true;
+      }
+    }
   }
-  // Проверка главной диагонали
-  if ([0, 1, 2, 3].every(i => board[i][i] === player)) return true;
-  // Проверка побочной диагонали
-  if ([0, 1, 2, 3].every(i => board[i][3 - i] === player)) return true;
+
+  // Проверка главной диагонали (нужно 4 в ряд)
+  for (let i = 0; i <= 6 - 4; i++) {
+    for (let j = 0; j <= 6 - 4; j++) {
+      if (board[i][j] === player && board[i + 1][j + 1] === player && board[i + 2][j + 2] === player && board[i + 3][j + 3] === player) {
+        return true;
+      }
+    }
+  }
+
+  // Проверка побочной диагонали (нужно 4 в ряд)
+  for (let i = 0; i <= 6 - 4; i++) {
+    for (let j = 3; j < 6; j++) {
+      if (board[i][j] === player && board[i + 1][j - 1] === player && board[i + 2][j - 2] === player && board[i + 3][j - 3] === player) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
