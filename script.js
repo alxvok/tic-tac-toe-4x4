@@ -27,30 +27,75 @@ function makeMove(row, col) {
       currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
       document.getElementById('status').textContent = `Ходит: ${currentPlayer}`;
       if (currentPlayer === 'O') {
-        setTimeout(botMove, 500);
+        setTimeout(botMove, 500); // Задержка для реалистичности
       }
     }
   }
 }
 
 function botMove() {
+  // 1. Проверка на победу бота
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (board[i][j] === null) {
+        board[i][j] = 'O'; // Симулируем ход
+        if (checkWin('O')) {
+          board[i][j] = 'O'; // Реальный ход
+          updateUI();
+          if (checkWin('O')) {
+            document.getElementById('status').textContent = 'O выиграл!';
+            setTimeout(resetGame, 2000);
+          }
+          return;
+        }
+        board[i][j] = null; // Отменяем симуляцию
+      }
+    }
+  }
+
+  // 2. Блокировка игрока
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (board[i][j] === null) {
+        board[i][j] = 'X'; // Симулируем ход игрока
+        if (checkWin('X')) {
+          board[i][j] = 'O'; // Блокируем
+          updateUI();
+          currentPlayer = 'X';
+          document.getElementById('status').textContent = 'Ходит: X';
+          return;
+        }
+        board[i][j] = null; // Отменяем симуляцию
+      }
+    }
+  }
+
+  // 3. Стратегический ход (приоритет — центр и линии с двумя "O")
+  const centerMoves = [[1, 1], [1, 2], [2, 1], [2, 2]];
+  for (let [i, j] of centerMoves) {
+    if (board[i][j] === null) {
+      board[i][j] = 'O';
+      updateUI();
+      currentPlayer = 'X';
+      document.getElementById('status').textContent = 'Ходит: X';
+      return;
+    }
+  }
+
+  // 4. Случайный ход, если ничего не найдено
   let emptyCells = [];
   board.forEach((row, i) => {
     row.forEach((cell, j) => {
       if (cell === null) emptyCells.push([i, j]);
     });
   });
-  const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-  makeMove(row, col);
-}
-
-function updateUI() {
-  const cells = document.querySelectorAll('.cell');
-  cells.forEach(cell => {
-    const row = cell.dataset.row;
-    const col = cell.dataset.col;
-    cell.textContent = board[row][col] || '';
-  });
+  if (emptyCells.length > 0) {
+    const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    board[row][col] = 'O';
+    updateUI();
+    currentPlayer = 'X';
+    document.getElementById('status').textContent = 'Ходит: X';
+  }
 }
 
 function checkWin(player) {
