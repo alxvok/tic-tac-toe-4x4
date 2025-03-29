@@ -18,14 +18,14 @@ function makeMove(row, col) {
     board[row][col] = currentPlayer;
     updateUI();
     if (checkWin(currentPlayer)) {
-      document.getElementById('status').textContent = `${currentPlayer} выиграл!`;
+      document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты победил!' : 'Бот победил!';
       setTimeout(resetGame, 2000);
     } else if (board.flat().every(cell => cell !== null)) {
       document.getElementById('status').textContent = 'Ничья!';
       setTimeout(resetGame, 2000);
     } else {
       currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-      document.getElementById('status').textContent = `Ходит: ${currentPlayer}`;
+      document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
       if (currentPlayer === 'O') {
         setTimeout(botMove, 500); // Задержка для реалистичности
       }
@@ -42,10 +42,8 @@ function botMove() {
         if (checkWin('O')) {
           board[i][j] = 'O'; // Реальный ход
           updateUI();
-          if (checkWin('O')) {
-            document.getElementById('status').textContent = 'O выиграл!';
-            setTimeout(resetGame, 2000);
-          }
+          document.getElementById('status').textContent = 'Бот победил!';
+          setTimeout(resetGame, 2000);
           return;
         }
         board[i][j] = null; // Отменяем симуляцию
@@ -62,7 +60,7 @@ function botMove() {
           board[i][j] = 'O'; // Блокируем
           updateUI();
           currentPlayer = 'X';
-          document.getElementById('status').textContent = 'Ходит: X';
+          document.getElementById('status').textContent = 'Ты ходи';
           return;
         }
         board[i][j] = null; // Отменяем симуляцию
@@ -77,7 +75,7 @@ function botMove() {
       board[i][j] = 'O';
       updateUI();
       currentPlayer = 'X';
-      document.getElementById('status').textContent = 'Ходит: X';
+      document.getElementById('status').textContent = 'Ты ходи';
       return;
     }
   }
@@ -94,7 +92,7 @@ function botMove() {
     board[row][col] = 'O';
     updateUI();
     currentPlayer = 'X';
-    document.getElementById('status').textContent = 'Ходит: X';
+    document.getElementById('status').textContent = 'Ты ходи';
   }
 }
 
@@ -131,5 +129,5 @@ function resetGame() {
   board.forEach(row => row.fill(null));
   currentPlayer = 'X';
   updateUI();
-  document.getElementById('status').textContent = 'Ваш ход';
+  document.getElementById('status').textContent = 'Ты ходи';
 }
