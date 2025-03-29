@@ -1,6 +1,6 @@
 body {
     font-family: 'Arial', sans-serif;
-    background-color: #f0f8ff;
+    background-color: #f0f8ff; /* Светло-голубой фон */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -8,11 +8,17 @@ body {
     margin: 0;
 }
 
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 #game-board {
     display: grid;
     grid-template-columns: repeat(4, 80px);
     gap: 5px;
-    background-color: #222;
+    background-color: #222; /* Тёмный фон для сетки */
     padding: 10px;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -21,7 +27,7 @@ body {
 .cell {
     width: 80px;
     height: 80px;
-    background-color: #fff;
+    background-color: #fff; /* Белый фон ячеек */
     border-radius: 5px;
     display: flex;
     align-items: center;
@@ -34,8 +40,8 @@ body {
 }
 
 .cell:hover {
-    transform: scale(1.05);
-    background-color: #e0e0e0;
+    transform: scale(1.05); /* Лёгкое увеличение при наведении */
+    background-color: #e0e0e0; /* Серый фон при наведении */
 }
 
 .cell.x {
@@ -53,6 +59,7 @@ body {
     font-size: 24px;
     margin-top: 20px;
     color: #333;
+    font-weight: bold;
 }
 
 @keyframes pop {
