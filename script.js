@@ -1,5 +1,7 @@
 const board = Array(4).fill().map(() => Array(4).fill(null));
 let currentPlayer = 'X';
+let playerWins = 0; // Счётчик побед игрока
+let botWins = 0; // Счётчик побед бота
 
 const gameBoard = document.getElementById('game-board');
 for (let i = 0; i < 4; i++) {
@@ -18,17 +20,28 @@ function makeMove(row, col) {
     board[row][col] = currentPlayer;
     updateUI();
     if (checkWin(currentPlayer)) {
-      document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты победил!' : 'Бот победил!';
+      if (currentPlayer === 'X') {
+        playerWins++;
+        document.getElementById('status').textContent = 'Ты победил!';
+      } else {
+        botWins++;
+        document.getElementById('status').textContent = 'Бот победил!';
+      }
+      updateScore();
       setTimeout(resetGame, 2000);
-    } else if (board.flat().every(cell => cell !== null)) {
+      return; // Завершаем ход, чтобы не продолжать
+    }
+    // Проверяем на ничью сразу после хода
+    if (board.flat().every(cell => cell !== null)) {
       document.getElementById('status').textContent = 'Ничья!';
       setTimeout(resetGame, 2000);
-    } else {
-      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-      document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
-      if (currentPlayer === 'O') {
-        setTimeout(botMove, 500); // Задержка для реалистичности
-      }
+      return; // Завершаем ход
+    }
+    // Если игра продолжается, меняем игрока
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
+    if (currentPlayer === 'O') {
+      setTimeout(botMove, 500); // Задержка для реалистичности
     }
   }
 }
@@ -42,6 +55,8 @@ function botMove() {
         if (checkWin('O')) {
           board[i][j] = 'O'; // Реальный ход
           updateUI();
+          botWins++;
+          updateScore();
           document.getElementById('status').textContent = 'Бот победил!';
           setTimeout(resetGame, 2000);
           return;
@@ -61,6 +76,11 @@ function botMove() {
           updateUI();
           currentPlayer = 'X';
           document.getElementById('status').textContent = 'Ты ходи';
+          // Проверяем на ничью после хода бота
+          if (board.flat().every(cell => cell !== null)) {
+            document.getElementById('status').textContent = 'Ничья!';
+            setTimeout(resetGame, 2000);
+          }
           return;
         }
         board[i][j] = null; // Отменяем симуляцию
@@ -76,6 +96,11 @@ function botMove() {
       updateUI();
       currentPlayer = 'X';
       document.getElementById('status').textContent = 'Ты ходи';
+      // Проверяем на ничью после хода бота
+      if (board.flat().every(cell => cell !== null)) {
+        document.getElementById('status').textContent = 'Ничья!';
+        setTimeout(resetGame, 2000);
+      }
       return;
     }
   }
@@ -93,6 +118,11 @@ function botMove() {
     updateUI();
     currentPlayer = 'X';
     document.getElementById('status').textContent = 'Ты ходи';
+    // Проверяем на ничью после хода бота
+    if (board.flat().every(cell => cell !== null)) {
+      document.getElementById('status').textContent = 'Ничья!';
+      setTimeout(resetGame, 2000);
+    }
   }
 }
 
@@ -131,3 +161,11 @@ function resetGame() {
   updateUI();
   document.getElementById('status').textContent = 'Ты ходи';
 }
+
+function updateScore() {
+  document.getElementById('player-score').textContent = `Ты: ${playerWins}`;
+  document.getElementById('bot-score').textContent = `Бот: ${botWins}`;
+}
+
+// Инициализация счёта при загрузке
+updateScore();
