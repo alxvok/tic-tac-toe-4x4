@@ -70,7 +70,7 @@ function botMove() {
     }
   }
 
-  // 3. Стратегический ход (приоритет — центр и линии с двумя "O")
+  // 3. Стратегический ход (приоритет — центр)
   const centerMoves = [[1, 1], [1, 2], [2, 1], [2, 2]];
   for (let [i, j] of centerMoves) {
     if (board[i][j] === null) {
@@ -98,14 +98,31 @@ function botMove() {
   }
 }
 
+function updateUI() {
+  const cells = document.querySelectorAll('.cell');
+  cells.forEach(cell => {
+    const row = cell.dataset.row;
+    const col = cell.dataset.col;
+    const value = board[row][col];
+    cell.textContent = value || '';
+    cell.classList.remove('x', 'o');
+    if (value === 'X') cell.classList.add('x');
+    if (value === 'O') cell.classList.add('o');
+  });
+}
+
 function checkWin(player) {
+  // Проверка горизонталей
   for (let i = 0; i < 4; i++) {
     if (board[i].every(cell => cell === player)) return true;
   }
+  // Проверка вертикалей
   for (let j = 0; j < 4; j++) {
     if (board.every(row => row[j] === player)) return true;
   }
+  // Проверка главной диагонали
   if ([0, 1, 2, 3].every(i => board[i][i] === player)) return true;
+  // Проверка побочной диагонали
   if ([0, 1, 2, 3].every(i => board[i][3 - i] === player)) return true;
   return false;
 }
