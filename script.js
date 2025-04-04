@@ -4,7 +4,7 @@ let playerWins = 0;
 let botWins = 0;
 let gameEnded = false;
 
-// Размещаем 5 случайных бомбочек
+// Размещаем случайные бомбочки
 const bombs = [];
 while (bombs.length < 5) {
   const row = Math.floor(Math.random() * 8);
