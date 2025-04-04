@@ -16,7 +16,8 @@
     --shadow-color: rgba(0, 0, 0, 0.1);
 
     /* Размеры адаптируются под ширину экрана */
-    --cell-size: min(max(35px, 10vw), 55px); /* Динамический размер ячейки */
+    /* Для 8x6 делаем ячейки чуть меньше по умолчанию */
+    --cell-size: min(max(35px, 10vw), 55px);
 }
 
 * {
@@ -81,10 +82,7 @@ h1 {
 /* --- Игровое поле --- */
 .board {
     display: grid;
-    /* 6 колонок */
-    grid-template-columns: repeat(6, var(--cell-size));
-    /* 8 рядов - размер ячейки определяет высоту */
-    grid-auto-rows: var(--cell-size);
+    /* Количество колонок (6) и высота строк будут установлены через JS и --cell-size */
     gap: 4px; /* Промежутки между ячейками */
     background-color: var(--board-bg);
     border: 1px solid var(--cell-border);
@@ -97,6 +95,8 @@ h1 {
 }
 
 .cell {
+    width: var(--cell-size); /* Явно задаем ширину */
+    height: var(--cell-size); /* Явно задаем высоту */
     background-color: var(--cell-bg);
     border: 1px solid var(--cell-border);
     border-radius: 4px;
@@ -111,7 +111,7 @@ h1 {
     -webkit-tap-highlight-color: transparent; /* Убираем подсветку при тапе */
 }
 
-.cell:not(.x):not(.o):not(.exploded):hover {
+.cell:not(.x):not(.o):not(.exploded):not(.bomb-revealed):hover {
     background-color: var(--cell-hover-bg);
 }
 
@@ -126,16 +126,18 @@ h1 {
     cursor: not-allowed;
 }
 
-/* Стиль для бомбы (скрыт по умолчанию, виден при взрыве) */
+/* Стиль для бомбы (виден при взрыве) */
 .cell.bomb-revealed {
     color: var(--bomb-color);
-    /* Можно добавить иконку или эффект */
+    font-size: calc(var(--cell-size) * 0.5); /* Иконка бомбы может быть чуть меньше */
+    cursor: not-allowed;
 }
 
 /* Стиль для взорванной ячейки (временный) */
 .cell.exploded {
-    background-color: #ffdddd; /* Легкий красный фон для взрыва */
-    color: transparent; /* Скрываем символ */
+    /* Может использоваться для подсветки самой бомбы или очищенных ячеек */
+    background-color: #ffdddd;
+    color: transparent; /* Скрываем символ во время анимации */
     animation: explosion 0.5s ease-out;
     cursor: not-allowed;
 }
@@ -187,9 +189,9 @@ h1 {
 }
 
 /* --- Адаптивность --- */
-@media (max-width: 380px) {
+@media (max-width: 420px) { /* Увеличил порог для меньших ячеек */
      :root {
-        /* Уменьшаем ячейки на очень маленьких экранах */
+        /* Уменьшаем ячейки на маленьких экранах */
         --cell-size: min(max(30px, 9vw), 45px);
     }
     .game-container {
