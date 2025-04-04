@@ -1,12 +1,22 @@
-const board = Array(6).fill().map(() => Array(6).fill(null)); // Поле 6x6
+const board = Array(6).fill().map(() => Array(8).fill(null)); // Поле 6x8
 let currentPlayer = 'X';
-let playerWins = 0; // Счётчик побед игрока
-let botWins = 0; // Счётчик побед бота
-let gameEnded = false; // Флаг окончания игры
+let playerWins = 0;
+let botWins = 0;
+let gameEnded = false;
+
+// Размещаем 5 случайных бомбочек
+const bombs = [];
+while (bombs.length < 5) {
+  const row = Math.floor(Math.random() * 6);
+  const col = Math.floor(Math.random() * 8);
+  if (!bombs.some(b => b.row === row && b.col === col)) {
+    bombs.push({ row, col });
+  }
+}
 
 const gameBoard = document.getElementById('game-board');
 for (let i = 0; i < 6; i++) {
-  for (let j = 0; j < 6; j++) {
+  for (let j = 0; j < 8; j++) {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.row = i;
@@ -16,124 +26,51 @@ for (let i = 0; i < 6; i++) {
   }
 }
 
-// Создаём кнопку "Новая игра"
-const newGameButton = document.createElement('button');
-newGameButton.id = 'new-game-button';
-newGameButton.textContent = 'Новая игра';
-newGameButton.style.display = 'none'; // Скрыта по умолчанию
-newGameButton.addEventListener('click', resetGame);
-document.querySelector('.container').appendChild(newGameButton);
+document.getElementById('new-game-button').addEventListener('click', resetGame);
 
 function makeMove(row, col) {
   if (board[row][col] === null && !gameEnded) {
     board[row][col] = currentPlayer;
     updateUI();
-    if (checkWin(currentPlayer)) {
-      if (currentPlayer === 'X') {
-        playerWins++;
-        document.getElementById('status').textContent = 'Ты победил!';
-        document.getElementById('status').classList.add('win');
+    const winInfo = checkWin(currentPlayer);
+    if (winInfo) {
+      const hasBomb = checkForBomb(winInfo);
+      if (hasBomb) {
+        explodeLine(winInfo);
+        setTimeout(() => {
+          document.getElementById('status').textContent = 'Бомбочка взорвала линию!';
+          setTimeout(() => {
+            document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
+          }, 1000);
+        }, 500);
       } else {
-        botWins++;
-        document.getElementById('status').textContent = 'Бот победил!';
+        highlightWinLine(winInfo);
+        if (currentPlayer === 'X') {
+          playerWins++;
+          document.getElementById('status').textContent = 'Ты победил!';
+        } else {
+          botWins++;
+          document.getElementById('status').textContent = 'Бот победил!';
+        }
         document.getElementById('status').classList.add('win');
+        updateScore();
+        endGame();
       }
-      updateScore();
-      endGame();
-      return;
-    }
-    // Проверяем на ничью сразу после хода
-    if (board.flat().every(cell => cell !== null)) {
+    } else if (board.flat().every(cell => cell !== null)) {
       document.getElementById('status').textContent = 'Ничья!';
       endGame();
-      return;
-    }
-    // Если игра продолжается, меняем игрока
-    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-    document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
-    if (currentPlayer === 'O') {
-      setTimeout(botMove, 500); // Задержка для реалистичности
+    } else {
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
+      if (currentPlayer === 'O') {
+        setTimeout(botMove, 500);
+      }
     }
   }
 }
 
 function botMove() {
   if (gameEnded) return;
-
-  // 1. Проверка на победу бота
-  for (let i = 0; i < 6; i++) {
-    for (let j = 0; j < 6; j++) {
-      if (board[i][j] === null) {
-        board[i][j] = 'O'; // Симулируем ход
-        if (checkWin('O')) {
-          board[i][j] = 'O'; // Реальный ход
-          updateUI();
-          botWins++;
-          updateScore();
-          document.getElementById('status').textContent = 'Бот победил!';
-          document.getElementById('status').classList.add('win');
-          endGame();
-          return;
-        }
-        board[i][j] = null; // Отменяем симуляцию
-      }
-    }
-  }
-
-  // 2. Блокировка игрока (немедленная победа)
-  for (let i = 0; i < 6; i++) {
-    for (let j = 0; j < 6; j++) {
-      if (board[i][j] === null) {
-        board[i][j] = 'X'; // Симулируем ход игрока
-        if (checkWin('X')) {
-          board[i][j] = 'O'; // Блокируем
-          updateUI();
-          currentPlayer = 'X';
-          document.getElementById('status').textContent = 'Ты ходи';
-          checkForDraw();
-          return;
-        }
-        board[i][j] = null; // Отменяем симуляцию
-      }
-    }
-  }
-
-  // 3. Поиск линий с 2 или 3 "O" (стратегический ход)
-  const bestMove = findBestMove('O', 2); // Ищем линии с 2 или 3 "O"
-  if (bestMove) {
-    board[bestMove.row][bestMove.col] = 'O';
-    updateUI();
-    currentPlayer = 'X';
-    document.getElementById('status').textContent = 'Ты ходи';
-    checkForDraw();
-    return;
-  }
-
-  // 4. Блокировка линий с 2 или 3 "X" (предотвращение угрозы)
-  const blockMove = findBestMove('X', 2); // Ищем линии с 2 или 3 "X"
-  if (blockMove) {
-    board[blockMove.row][blockMove.col] = 'O';
-    updateUI();
-    currentPlayer = 'X';
-    document.getElementById('status').textContent = 'Ты ходи';
-    checkForDraw();
-    return;
-  }
-
-  // 5. Стратегический ход (приоритет — центр)
-  const centerMoves = [[2, 2], [2, 3], [3, 2], [3, 3]]; // Центр для поля 6x6
-  for (let [i, j] of centerMoves) {
-    if (board[i][j] === null) {
-      board[i][j] = 'O';
-      updateUI();
-      currentPlayer = 'X';
-      document.getElementById('status').textContent = 'Ты ходи';
-      checkForDraw();
-      return;
-    }
-  }
-
-  // 6. Случайный ход, если ничего не найдено
   let emptyCells = [];
   board.forEach((row, i) => {
     row.forEach((cell, j) => {
@@ -142,69 +79,104 @@ function botMove() {
   });
   if (emptyCells.length > 0) {
     const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-    board[row][col] = 'O';
-    updateUI();
-    currentPlayer = 'X';
-    document.getElementById('status').textContent = 'Ты ходи';
-    checkForDraw();
+    makeMove(row, col);
   }
 }
 
-// Новая функция для поиска линий с 2 или 3 символами
-function findBestMove(player, minCount) {
-  // Проверка горизонталей
+function checkWin(player) {
+  // Горизонтали
   for (let i = 0; i < 6; i++) {
-    for (let j = 0; j <= 6 - 4; j++) {
-      let count = 0;
-      let emptyCell = null;
-      for (let k = 0; k < 4; k++) {
-        if (board[i][j + k] === player) count++;
-        else if (board[i][j + k] === null) emptyCell = { row: i, col: j + k };
+    for (let j = 0; j <= 8 - 4; j++) {
+      if (board[i][j] === player && board[i][j + 1] === player && board[i][j + 2] === player && board[i][j + 3] === player) {
+        return { type: 'horizontal', row: i, startCol: j };
       }
-      if (count >= minCount && emptyCell) return emptyCell;
     }
   }
-
-  // Проверка вертикалей
-  for (let j = 0; j < 6; j++) {
+  // Вертикали
+  for (let j = 0; j < 8; j++) {
     for (let i = 0; i <= 6 - 4; i++) {
-      let count = 0;
-      let emptyCell = null;
-      for (let k = 0; k < 4; k++) {
-        if (board[i + k][j] === player) count++;
-        else if (board[i + k][j] === null) emptyCell = { row: i + k, col: j };
+      if (board[i][j] === player && board[i + 1][j] === player && board[i + 2][j] === player && board[i + 3][j] === player) {
+        return { type: 'vertical', col: j, startRow: i };
       }
-      if (count >= minCount && emptyCell) return emptyCell;
     }
   }
-
-  // Проверка главной диагонали
+  // Главная диагональ
   for (let i = 0; i <= 6 - 4; i++) {
-    for (let j = 0; j <= 6 - 4; j++) {
-      let count = 0;
-      let emptyCell = null;
-      for (let k = 0; k < 4; k++) {
-        if (board[i + k][j + k] === player) count++;
-        else if (board[i + k][j + k] === null) emptyCell = { row: i + k, col: j + k };
+    for (let j = 0; j <= 8 - 4; j++) {
+      if (board[i][j] === player && board[i + 1][j + 1] === player && board[i + 2][j + 2] === player && board[i + 3][j + 3] === player) {
+        return { type: 'diagonal', startRow: i, startCol: j };
       }
-      if (count >= minCount && emptyCell) return emptyCell;
     }
   }
-
-  // Проверка побочной диагонали
+  // Побочная диагональ
   for (let i = 0; i <= 6 - 4; i++) {
-    for (let j = 3; j < 6; j++) {
-      let count = 0;
-      let emptyCell = null;
-      for (let k = 0; k < 4; k++) {
-        if (board[i + k][j - k] === player) count++;
-        else if (board[i + k][j - k] === null) emptyCell = { row: i + k, col: j - k };
+    for (let j = 3; j < 8; j++) {
+      if (board[i][j] === player && board[i + 1][j - 1] === player && board[i + 2][j - 2] === player && board[i + 3][j - 3] === player) {
+        return { type: 'anti-diagonal', startRow: i, startCol: j };
       }
-      if (count >= minCount && emptyCell) return emptyCell;
     }
   }
-
   return null;
+}
+
+function checkForBomb(winInfo) {
+  const { type, startRow, startCol, row, col } = winInfo;
+  if (type === 'horizontal') {
+    for (let j = startCol; j < startCol + 4; j++) {
+      if (bombs.some(b => b.row === row && b.col === j)) return true;
+    }
+  } else if (type === 'vertical') {
+    for (let i = startRow; i < startRow + 4; i++) {
+      if (bombs.some(b => b.row === i && b.col === col)) return true;
+    }
+  } else if (type === 'diagonal') {
+    for (let k = 0; k < 4; k++) {
+      if (bombs.some(b => b.row === startRow + k && b.col === startCol + k)) return true;
+    }
+  } else if (type === 'anti-diagonal') {
+    for (let k = 0; k < 4; k++) {
+      if (bombs.some(b => b.row === startRow + k && b.col === startCol - k)) return true;
+    }
+  }
+  return false;
+}
+
+function explodeLine(winInfo) {
+  const { type, startRow, startCol, row, col } = winInfo;
+  if (type === 'horizontal') {
+    for (let j = startCol; j < startCol + 4; j++) {
+      const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${j}"]`);
+      cell.classList.add('explode');
+      setTimeout(() => {
+        board[row][j] = null;
+        cell.textContent = '';
+        cell.classList.remove('explode');
+      }, 500);
+    }
+  } else if (type === 'vertical') {
+    for (let i = startRow; i < startRow + 4; i++) {
+      const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${col}"]`);
+      cell.classList.add('explode');
+      setTimeout(() => {
+        board[i][col] = null;
+        cell.textContent = '';
+        cell.classList.remove('explode');
+      }, 500);
+    }
+  }
+}
+
+function highlightWinLine(winInfo) {
+  const { type, startRow, startCol, row, col } = winInfo;
+  if (type === 'horizontal') {
+    for (let j = startCol; j < startCol + 4; j++) {
+      document.querySelector(`.cell[data-row="${row}"][data-col="${j}"]`).classList.add('win-line');
+    }
+  } else if (type === 'vertical') {
+    for (let i = startRow; i < startRow + 4; i++) {
+      document.querySelector(`.cell[data-row="${i}"][data-col="${col}"]`).classList.add('win-line');
+    }
+  }
 }
 
 function updateUI() {
@@ -214,57 +186,10 @@ function updateUI() {
     const col = cell.dataset.col;
     const value = board[row][col];
     cell.textContent = value || '';
-    cell.classList.remove('x', 'o');
+    cell.classList.remove('x', 'o', 'win-line');
     if (value === 'X') cell.classList.add('x');
     if (value === 'O') cell.classList.add('o');
   });
-}
-
-function checkWin(player) {
-  // Проверка горизонталей (нужно 4 в ряд)
-  for (let i = 0; i < 6; i++) {
-    for (let j = 0; j <= 6 - 4; j++) {
-      if (board[i][j] === player && board[i][j + 1] === player && board[i][j + 2] === player && board[i][j + 3] === player) {
-        return true;
-      }
-    }
-  }
-
-  // Проверка вертикалей (нужно 4 в ряд)
-  for (let j = 0; j < 6; j++) {
-    for (let i = 0; i <= 6 - 4; i++) {
-      if (board[i][j] === player && board[i + 1][j] === player && board[i + 2][j] === player && board[i + 3][j] === player) {
-        return true;
-      }
-    }
-  }
-
-  // Проверка главной диагонали (нужно 4 в ряд)
-  for (let i = 0; i <= 6 - 4; i++) {
-    for (let j = 0; j <= 6 - 4; j++) {
-      if (board[i][j] === player && board[i + 1][j + 1] === player && board[i + 2][j + 2] === player && board[i + 3][j + 3] === player) {
-        return true;
-      }
-    }
-  }
-
-  // Проверка побочной диагонали (нужно 4 в ряд)
-  for (let i = 0; i <= 6 - 4; i++) {
-    for (let j = 3; j < 6; j++) {
-      if (board[i][j] === player && board[i + 1][j - 1] === player && board[i + 2][j - 2] === player && board[i + 3][j - 3] === player) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-function checkForDraw() {
-  if (board.flat().every(cell => cell !== null)) {
-    document.getElementById('status').textContent = 'Ничья!';
-    endGame();
-  }
 }
 
 function endGame() {
@@ -280,6 +205,15 @@ function resetGame() {
   document.getElementById('status').textContent = 'Ты ходи';
   document.getElementById('status').classList.remove('win');
   document.getElementById('new-game-button').style.display = 'none';
+  // Перемещаем бомбочки
+  bombs.length = 0;
+  while (bombs.length < 5) {
+    const row = Math.floor(Math.random() * 6);
+    const col = Math.floor(Math.random() * 8);
+    if (!bombs.some(b => b.row === row && b.col === col)) {
+      bombs.push({ row, col });
+    }
+  }
 }
 
 function updateScore() {
@@ -287,5 +221,4 @@ function updateScore() {
   document.getElementById('bot-score').textContent = `Бот: ${botWins}`;
 }
 
-// Инициализация счёта при загрузке
 updateScore();
