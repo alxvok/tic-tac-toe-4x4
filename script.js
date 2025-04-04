@@ -16,14 +16,14 @@ while (bombs.length < 5) {
 
 const gameBoard = document.getElementById('game-board');
 for (let i = 0; i < 8; i++) {
-  for (let j = 0; j < 6; j++) {
+  board[i].forEach((_, j) => {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.row = i;
     cell.dataset.col = j;
     cell.addEventListener('click', () => makeMove(i, j));
     gameBoard.appendChild(cell);
-  }
+  });
 }
 
 document.getElementById('new-game-button').addEventListener('click', resetGame);
@@ -56,6 +56,7 @@ function botMove() {
         if (winInfo) {
           const bombCell = checkForBomb(winInfo);
           if (!bombCell) { // Ходим, только если нет бомбочки
+            updateUI();
             handleWinOrBomb('O');
             return;
           }
@@ -73,8 +74,11 @@ function botMove() {
         if (checkWin('X')) {
           board[i][j] = 'O';
           updateUI();
-          currentPlayer = 'X';
-          document.getElementById('status').textContent = 'Ты ходи';
+          handleWinOrBomb('O'); // Проверяем, не выиграл ли бот после этого хода
+          if (!gameEnded) {
+            currentPlayer = 'X';
+            document.getElementById('status').textContent = 'Ты ходи';
+          }
           return;
         }
         board[i][j] = null;
@@ -140,8 +144,11 @@ function botMove() {
     const [row, col] = bestMove;
     board[row][col] = 'O';
     updateUI();
-    currentPlayer = 'X';
-    document.getElementById('status').textContent = 'Ты ходи';
+    handleWinOrBomb('O'); // Проверяем, не выиграл ли бот после этого хода
+    if (!gameEnded) {
+      currentPlayer = 'X';
+      document.getElementById('status').textContent = 'Ты ходи';
+    }
     return;
   }
 
@@ -156,8 +163,11 @@ function botMove() {
     const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
     board[row][col] = 'O';
     updateUI();
-    currentPlayer = 'X';
-    document.getElementById('status').textContent = 'Ты ходи';
+    handleWinOrBomb('O'); // Проверяем, не выиграл ли бот после этого хода
+    if (!gameEnded) {
+      currentPlayer = 'X';
+      document.getElementById('status').textContent = 'Ты ходи';
+    }
   }
 }
 
@@ -207,20 +217,9 @@ function checkForBomb(winInfo) {
     }
   } else if (type === 'vertical') {
     for (let i = startRow; i < startRow + 4; i++) {
+```javascript
       if (bombs.some(b => b.row === i && b.col === col)) {
         return { row: i, col };
-      }
-    }
-  } else if (type === 'diagonal') {
-    for (let k = 0; k < 4; k++) {
-      if (bombs.some(b => b.row === startRow + k && b.col === startCol + k)) {
-        return { row: startRow + k, col: startCol + k };
-      }
-    }
-  } else if (type === 'anti-diagonal') {
-    for (let k = 0; k < 4; k++) {
-      if (bombs.some(b => b.row === startRow + k && b.col === startCol - k)) {
-        return { row: startRow + k, col: startCol - k };
       }
     }
   }
