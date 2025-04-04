@@ -40,7 +40,7 @@ body {
 
 #game-board {
     display: grid;
-    grid-template-columns: repeat(6, 60px);
+    grid-template-columns: repeat(6, 70px);
     gap: 5px;
     background-color: #333;
     padding: 10px;
@@ -48,14 +48,14 @@ body {
 }
 
 .cell {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     background-color: #fff;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: bold;
     color: #333;
     cursor: pointer;
@@ -141,24 +141,5 @@ body {
     100% { text-shadow: 0 0 20px #ff4500, 0 0 30px #1e90ff; }
 }
 
-@media (max-width: 600px) {
-    .cell {
-        width: 50px;
-        height: 50px;
-        font-size: 24px;
-    }
-    #game-board {
-        grid-template-columns: repeat(6, 50px);
-    }
-}
 
-@media (max-width: 400px) {
-    .cell {
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-    }
-    #game-board {
-        grid-template-columns: repeat(6, 40px);
-    }
 }
