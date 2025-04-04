@@ -1,4 +1,4 @@
-const board = Array(6).fill().map(() => Array(8).fill(null)); // Поле 6x8
+const board = Array(8).fill().map(() => Array(6).fill(null)); // 8 строк, 6 столбцов
 let currentPlayer = 'X';
 let playerWins = 0;
 let botWins = 0;
@@ -7,16 +7,16 @@ let gameEnded = false;
 // Размещаем 5 случайных бомбочек
 const bombs = [];
 while (bombs.length < 5) {
-  const row = Math.floor(Math.random() * 6);
-  const col = Math.floor(Math.random() * 8);
+  const row = Math.floor(Math.random() * 8);
+  const col = Math.floor(Math.random() * 6);
   if (!bombs.some(b => b.row === row && b.col === col)) {
     bombs.push({ row, col });
   }
 }
 
 const gameBoard = document.getElementById('game-board');
-for (let i = 0; i < 6; i++) {
-  for (let j = 0; j < 8; j++) {
+for (let i = 0; i < 8; i++) {
+  for (let j = 0; j < 6; j++) {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.row = i;
@@ -38,7 +38,7 @@ function makeMove(row, col) {
       if (hasBomb) {
         explodeLine(winInfo);
         setTimeout(() => {
-          document.getElementById('status').textContent = 'Бомбочка взорвала линию!';
+          document.getElementById('status').textContent = `Бомбочка в ячейке [${hasBomb.row + 1}, ${hasBomb.col + 1}] взорвала линию!`;
           setTimeout(() => {
             document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
           }, 1000);
@@ -84,33 +84,33 @@ function botMove() {
 }
 
 function checkWin(player) {
-  // Горизонтали
-  for (let i = 0; i < 6; i++) {
-    for (let j = 0; j <= 8 - 4; j++) {
+  // Проверка горизонталей (4 в ряд)
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j <= 6 - 4; j++) {
       if (board[i][j] === player && board[i][j + 1] === player && board[i][j + 2] === player && board[i][j + 3] === player) {
         return { type: 'horizontal', row: i, startCol: j };
       }
     }
   }
-  // Вертикали
-  for (let j = 0; j < 8; j++) {
-    for (let i = 0; i <= 6 - 4; i++) {
+  // Проверка вертикалей (4 в ряд)
+  for (let j = 0; j < 6; j++) {
+    for (let i = 0; i <= 8 - 4; i++) {
       if (board[i][j] === player && board[i + 1][j] === player && board[i + 2][j] === player && board[i + 3][j] === player) {
         return { type: 'vertical', col: j, startRow: i };
       }
     }
   }
-  // Главная диагональ
-  for (let i = 0; i <= 6 - 4; i++) {
-    for (let j = 0; j <= 8 - 4; j++) {
+  // Проверка главной диагонали (4 в ряд)
+  for (let i = 0; i <= 8 - 4; i++) {
+    for (let j = 0; j <= 6 - 4; j++) {
       if (board[i][j] === player && board[i + 1][j + 1] === player && board[i + 2][j + 2] === player && board[i + 3][j + 3] === player) {
         return { type: 'diagonal', startRow: i, startCol: j };
       }
     }
   }
-  // Побочная диагональ
-  for (let i = 0; i <= 6 - 4; i++) {
-    for (let j = 3; j < 8; j++) {
+  // Проверка побочной диагонали (4 в ряд)
+  for (let i = 0; i <= 8 - 4; i++) {
+    for (let j = 3; j < 6; j++) {
       if (board[i][j] === player && board[i + 1][j - 1] === player && board[i + 2][j - 2] === player && board[i + 3][j - 3] === player) {
         return { type: 'anti-diagonal', startRow: i, startCol: j };
       }
@@ -123,47 +123,68 @@ function checkForBomb(winInfo) {
   const { type, startRow, startCol, row, col } = winInfo;
   if (type === 'horizontal') {
     for (let j = startCol; j < startCol + 4; j++) {
-      if (bombs.some(b => b.row === row && b.col === j)) return true;
+      if (bombs.some(b => b.row === row && b.col === j)) {
+        return { row, col: j };
+      }
     }
   } else if (type === 'vertical') {
     for (let i = startRow; i < startRow + 4; i++) {
-      if (bombs.some(b => b.row === i && b.col === col)) return true;
+      if (bombs.some(b => b.row === i && b.col === col)) {
+        return { row: i, col };
+      }
     }
   } else if (type === 'diagonal') {
     for (let k = 0; k < 4; k++) {
-      if (bombs.some(b => b.row === startRow + k && b.col === startCol + k)) return true;
+      if (bombs.some(b => b.row === startRow + k && b.col === startCol + k)) {
+        return { row: startRow + k, col: startCol + k };
+      }
     }
   } else if (type === 'anti-diagonal') {
     for (let k = 0; k < 4; k++) {
-      if (bombs.some(b => b.row === startRow + k && b.col === startCol - k)) return true;
+      if (bombs.some(b => b.row === startRow + k && b.col === startCol - k)) {
+        return { row: startRow + k, col: startCol - k };
+      }
     }
   }
-  return false;
+  return null;
 }
 
 function explodeLine(winInfo) {
   const { type, startRow, startCol, row, col } = winInfo;
+  let bombCell = null;
+
   if (type === 'horizontal') {
     for (let j = startCol; j < startCol + 4; j++) {
       const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${j}"]`);
+      if (bombs.some(b => b.row === row && b.col === j)) {
+        bombCell = cell;
+        bombCell.classList.add('bomb-explode');
+      }
       cell.classList.add('explode');
       setTimeout(() => {
         board[row][j] = null;
         cell.textContent = '';
         cell.classList.remove('explode');
+        if (bombCell) bombCell.classList.remove('bomb-explode');
       }, 500);
     }
   } else if (type === 'vertical') {
     for (let i = startRow; i < startRow + 4; i++) {
       const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${col}"]`);
+      if (bombs.some(b => b.row === i && b.col === col)) {
+        bombCell = cell;
+        bombCell.classList.add('bomb-explode');
+      }
       cell.classList.add('explode');
       setTimeout(() => {
         board[i][col] = null;
         cell.textContent = '';
         cell.classList.remove('explode');
+        if (bombCell) bombCell.classList.remove('bomb-explode');
       }, 500);
     }
   }
+  setTimeout(updateUI, 500);  // Обновляем UI после взрыва
 }
 
 function highlightWinLine(winInfo) {
@@ -208,8 +229,8 @@ function resetGame() {
   // Перемещаем бомбочки
   bombs.length = 0;
   while (bombs.length < 5) {
-    const row = Math.floor(Math.random() * 6);
-    const col = Math.floor(Math.random() * 8);
+    const row = Math.floor(Math.random() * 8);
+    const col = Math.floor(Math.random() * 6);
     if (!bombs.some(b => b.row === row && b.col === col)) {
       bombs.push({ row, col });
     }
