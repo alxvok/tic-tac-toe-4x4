@@ -4,9 +4,9 @@ let playerWins = 0;
 let botWins = 0;
 let gameEnded = false;
 
-// Размещаем 8 случайных бомбочек
+// Размещаем 5 случайных бомбочек
 const bombs = [];
-while (bombs.length < 8) {
+while (bombs.length < 5) {
   const row = Math.floor(Math.random() * 8);
   const col = Math.floor(Math.random() * 6);
   if (!bombs.some(b => b.row === row && b.col === col)) {
@@ -55,7 +55,7 @@ function botMove() {
         const winInfo = checkWin('O');
         if (winInfo) {
           const bombCell = checkForBomb(winInfo);
-          if (!bombCell) {
+          if (!bombCell) { // Ходим, только если нет бомбочки
             updateUI();
             handleWinOrBomb('O');
             return;
@@ -74,7 +74,7 @@ function botMove() {
         if (checkWin('X')) {
           board[i][j] = 'O';
           updateUI();
-          handleWinOrBomb('O');
+          handleWinOrBomb('O'); // Проверяем, не выиграл ли бот после этого хода
           if (!gameEnded) {
             currentPlayer = 'X';
             document.getElementById('status').textContent = 'Ты ходи';
@@ -144,7 +144,7 @@ function botMove() {
     const [row, col] = bestMove;
     board[row][col] = 'O';
     updateUI();
-    handleWinOrBomb('O');
+    handleWinOrBomb('O'); // Проверяем, не выиграл ли бот после этого хода
     if (!gameEnded) {
       currentPlayer = 'X';
       document.getElementById('status').textContent = 'Ты ходи';
@@ -163,7 +163,7 @@ function botMove() {
     const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
     board[row][col] = 'O';
     updateUI();
-    handleWinOrBomb('O');
+    handleWinOrBomb('O'); // Проверяем, не выиграл ли бот после этого хода
     if (!gameEnded) {
       currentPlayer = 'X';
       document.getElementById('status').textContent = 'Ты ходи';
@@ -199,4 +199,151 @@ function checkWin(player) {
   // Побочная диагональ
   for (let i = 0; i <= 8 - 4; i++) {
     for (let j = 3; j < 6; j++) {
-      if (board[i][j] === player && board
+      if (board[i][j] === player && board[i + 1][j - 1] === player && board[i + 2][j - 2] === player && board[i + 3][j - 3] === player) {
+        return { type: 'anti-diagonal', startRow: i, startCol: j };
+      }
+    }
+  }
+  return null;
+}
+
+function checkForBomb(winInfo) {
+  const { type, startRow, startCol, row, col } = winInfo;
+  if (type === 'horizontal') {
+    for (let j = startCol; j < startCol + 4; j++) {
+      if (bombs.some(b => b.row === row && b.col === j)) {
+        return { row, col: j };
+      }
+    }
+  } else if (type === 'vertical') {
+    for (let i = startRow; i < startRow + 4; i++) {
+```javascript
+      if (bombs.some(b => b.row === i && b.col === col)) {
+        return { row: i, col };
+      }
+    }
+  }
+  return null;
+}
+
+function handleWinOrBomb(player) {
+  const winInfo = checkWin(player);
+  if (winInfo) {
+    const bombCell = checkForBomb(winInfo);
+    if (bombCell) {
+      explodeLine(winInfo, bombCell);
+      setTimeout(() => {
+        document.getElementById('status').textContent = `Бомбочка в ячейке [${bombCell.row + 1}, ${bombCell.col + 1}] взорвала линию!`;
+        setTimeout(() => {
+          document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
+        }, 1000);
+      }, 500);
+    } else {
+      highlightWinLine(winInfo);
+      if (player === 'X') {
+        playerWins++;
+        document.getElementById('status').textContent = 'Ты победил!';
+      } else {
+        botWins++;
+        document.getElementById('status').textContent = 'Бот победил!';
+      }
+      document.getElementById('status').classList.add('win');
+      updateScore();
+      endGame();
+    }
+  } else if (board.flat().every(cell => cell !== null)) {
+    document.getElementById('status').textContent = 'Ничья!';
+    endGame();
+  }
+}
+
+function explodeLine(winInfo, bombCell) {
+  const { type, startRow, startCol, row, col } = winInfo;
+  let cellsToExplode = [];
+
+  if (type === 'horizontal') {
+    for (let j = startCol; j < startCol + 4; j++) {
+      const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${j}"]`);
+      cellsToExplode.push({ cell, row, col: j });
+    }
+  } else if (type === 'vertical') {
+    for (let i = startRow; i < startRow + 4; i++) {
+      const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${col}"]`);
+      cellsToExplode.push({ cell, row: i, col });
+    }
+  }
+
+  cellsToExplode.forEach(({ cell, row, col }) => {
+    cell.classList.add('explode');
+    if (row === bombCell.row && col === bombCell.col) {
+      cell.classList.add('bomb-explode');
+      setTimeout(() => {
+        cell.textContent = '💣';
+      }, 500);
+    }
+    setTimeout(() => {
+      board[row][col] = null;
+      if (row !== bombCell.row || col !== bombCell.col) {
+        cell.textContent = '';
+      }
+      cell.classList.remove('explode', 'bomb-explode');
+    }, 500);
+  });
+  setTimeout(updateUI, 500);
+}
+
+function highlightWinLine(winInfo) {
+  const { type, startRow, startCol, row, col } = winInfo;
+  if (type === 'horizontal') {
+    for (let j = startCol; j < startCol + 4; j++) {
+      document.querySelector(`.cell[data-row="${row}"][data-col="${j}"]`).classList.add('win-line');
+    }
+  } else if (type === 'vertical') {
+    for (let i = startRow; i < startRow + 4; i++) {
+      document.querySelector(`.cell[data-row="${i}"][data-col="${col}"]`).classList.add('win-line');
+    }
+  }
+}
+
+function updateUI() {
+  const cells = document.querySelectorAll('.cell');
+  cells.forEach(cell => {
+    const row = cell.dataset.row;
+    const col = cell.dataset.col;
+    const value = board[row][col];
+    cell.textContent = value || '';
+    cell.classList.remove('x', 'o', 'win-line');
+    if (value === 'X') cell.classList.add('x');
+    if (value === 'O') cell.classList.add('o');
+  });
+}
+
+function endGame() {
+  gameEnded = true;
+  document.getElementById('new-game-button').style.display = 'block';
+}
+
+function resetGame() {
+  board.forEach(row => row.fill(null));
+  currentPlayer = 'X';
+  gameEnded = false;
+  updateUI();
+  document.getElementById('status').textContent = 'Ты ходи';
+  document.getElementById('status').classList.remove('win');
+  document.getElementById('new-game-button').style.display = 'none';
+  bombs.length = 0;
+  while (bombs.length < 5) {
+    const row = Math.floor(Math.random() * 8);
+    const col = Math.floor(Math.random() * 6);
+    if (!bombs.some(b => b.row === row && b.col === col)) {
+      bombs.push({ row, col });
+    }
+  }
+}
+
+function updateScore() {
+  document.getElementById('player-score').textContent = `Ты: ${playerWins}`;
+  document.getElementById('bot-score').textContent = `Бот: ${botWins}`;
+}
+
+updateScore();
