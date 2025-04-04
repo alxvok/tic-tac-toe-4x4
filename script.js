@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Константы и Настройки ---
-    const ROWS = 8;
-    const COLS = 6;
-    const WIN_LENGTH = 4; // Нужно 4 в ряд для победы
-    const BOMB_COUNT = 8;  // Количество бомб на поле (можно настроить)
+    const ROWS = 8;          // Соответствует требованиям
+    const COLS = 6;          // Соответствует требованиям
+    const WIN_LENGTH = 4;    // Соответствует требованиям
+    const BOMB_COUNT = 8;    // Количество бомб для поля 8x6 (можно настроить)
     const PLAYER = 'X';
     const BOT = 'O';
     const BOMB = '💣';
@@ -27,6 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Инициализация Игры ---
     function initializeGame() {
+        // Проверка наличия элементов перед их использованием
+        if (!boardElement || !statusMessageElement || !playerScoreElement || !botScoreElement || !newGameButton) {
+            console.error("Ошибка: Не найдены все необходимые DOM-элементы!");
+            return; // Прекращаем инициализацию, если что-то не найдено
+        }
+
         board = Array(ROWS).fill(null).map(() => Array(COLS).fill(EMPTY));
         bombLocations.clear();
         gameOver = false;
@@ -38,19 +44,34 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStatusMessage(`Ход игрока (${PLAYER})`);
         updateScoreDisplay();
         newGameButton.disabled = true; // Кнопка активна только после завершения игры
-        console.log("Игра инициализирована. Бомбы:", Array.from(bombLocations)); // Для отладки
+        console.log("Игра инициализирована (8x6). Бомбы:", Array.from(bombLocations)); // Для отладки
     }
 
     // --- Размещение Бомб ---
     function placeBombs() {
         let bombsPlaced = 0;
+        if (BOMB_COUNT >= ROWS * COLS) {
+            console.warn("Количество бомб слишком велико для поля!");
+            // Можно или уменьшить BOMB_COUNT, или заполнить все поле бомбами
+            // пока просто ограничиваем
+            while (bombsPlaced < ROWS * COLS - 1) { // Оставляем хотя бы одну не-бомбу
+                 const row = Math.floor(Math.random() * ROWS);
+                 const col = Math.floor(Math.random() * COLS);
+                 const key = `${row}-${col}`;
+                 if (!bombLocations.has(key)) {
+                     bombLocations.add(key);
+                     bombsPlaced++;
+                 }
+            }
+            return;
+        }
+
         while (bombsPlaced < BOMB_COUNT) {
             const row = Math.floor(Math.random() * ROWS);
             const col = Math.floor(Math.random() * COLS);
             const key = `${row}-${col}`;
             if (!bombLocations.has(key)) {
                 bombLocations.add(key);
-                // Не ставим бомбу в массив board сразу, она "скрыта"
                 bombsPlaced++;
             }
         }
@@ -59,8 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Отрисовка Поля ---
     function renderBoard() {
         boardElement.innerHTML = ''; // Очищаем поле перед отрисовкой
+        // Устанавливаем количество колонок в CSS Grid
         boardElement.style.gridTemplateColumns = `repeat(${COLS}, var(--cell-size))`;
-        boardElement.style.gridAutoRows = `var(--cell-size)`;
+        // Высота строк определяется --cell-size (можно не указывать grid-auto-rows)
 
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
@@ -77,12 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     cell.classList.add('o');
                     cell.textContent = BOT;
                 }
-                 // Бомбы не показываем до клика
-                 // else if (bombLocations.has(`${r}-${c}`)) {
-                 //    cell.textContent = '?'; // Можно показать индикатор бомбы для отладки
-                 // }
+                // Бомбы не показываем до клика
 
-                // Убираем старые обработчики и добавляем новые
+                // Убираем старые обработчики (на всякий случай, если renderBoard вызовется снова)
                 cell.removeEventListener('click', handleCellClick);
                 cell.addEventListener('click', handleCellClick);
 
@@ -93,35 +112,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Обработка Клика по Ячейке ---
     function handleCellClick(event) {
-        if (gameOver || isBotThinking || currentPlayer !== PLAYER) return; // Игнорируем клики не в свой ход или во время раздумий бота
+        if (gameOver || isBotThinking || currentPlayer !== PLAYER) return;
 
         const cell = event.target;
+        // Доп. проверка, что кликнули именно по ячейке
+        if (!cell.classList.contains('cell')) return;
+
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
+
+        // Проверка корректности координат (на всякий случай)
+        if (isNaN(row) || isNaN(col) || row < 0 || row >= ROWS || col < 0 || col >= COLS) {
+            console.error("Некорректные координаты ячейки:", cell.dataset);
+            return;
+        }
+
         const bombKey = `${row}-${col}`;
 
         // Проверяем, не является ли ячейка уже занятой (кроме скрытых бомб)
         if (board[row][col] !== EMPTY) return;
 
         if (bombLocations.has(bombKey)) {
-            // Игрок попал на бомбу!
-            triggerBomb(row, col, PLAYER); // Передаем, кто активировал бомбу
-             // Бомба взорвалась, ход переходит к боту (после небольшой задержки)
+            triggerBomb(row, col, PLAYER);
              if (!gameOver) {
+                 // Ход переходит к боту после взрыва
                  switchPlayer();
-                 // Небольшая задержка перед ходом бота после взрыва
+                 // Небольшая задержка перед ходом бота
                  setTimeout(botMove, 600);
              }
-
         } else {
             // Обычный ход игрока
             makeMove(row, col, PLAYER);
+            // Ход бота запустится внутри makeMove, если игра не окончена
         }
     }
 
      // --- Совершение Хода (без бомб) ---
      function makeMove(row, col, player) {
-        if (gameOver || board[row][col] !== EMPTY) return false; // Проверка на всякий случай
+        if (gameOver || board[row][col] !== EMPTY) return false;
 
         board[row][col] = player;
         updateCell(row, col, player);
@@ -133,12 +161,12 @@ document.addEventListener('DOMContentLoaded', () => {
             endGame('draw');
         } else {
             switchPlayer();
-             // Если это был ход игрока, запускаем ход бота
-            if (player === PLAYER && !gameOver) {
+            if (player === PLAYER && !gameOver) { // Если это был ход игрока, передаем ход боту
                  isBotThinking = true;
                  updateStatusMessage('Бот думает...');
-                 // Имитация задержки для "раздумий" бота
                  setTimeout(botMove, Math.random() * 500 + 300); // 300-800ms
+             } else if (player === BOT && !gameOver) { // Если это был ход бота, просто обновляем статус для игрока
+                 updateStatusMessage(`Ход игрока (${PLAYER})`);
              }
         }
         return true; // Ход совершен
@@ -150,47 +178,50 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Бомба взорвана в ${row}-${col} игроком ${triggerPlayer}`);
         const bombCell = getCellElement(row, col);
         if (bombCell) {
-             bombCell.textContent = BOMB; // Показываем бомбу
-             bombCell.classList.add('bomb-revealed', 'exploded');
-             // Убираем класс 'exploded' после анимации
+             bombCell.textContent = BOMB;
+             bombCell.classList.add('bomb-revealed'); // Показываем бомбу постоянно
+             bombCell.classList.add('exploded'); // Добавляем анимацию взрыва
+             // Убираем класс 'exploded' после анимации, но оставляем bomb-revealed
             setTimeout(() => {
                 bombCell?.classList.remove('exploded');
-                 // Возможно, стоит оставить иконку бомбы видимой
-                 // bombCell.textContent = ''; // Или очистить ячейку после взрыва
             }, 500);
         }
 
-        // Удаляем бомбу из списка активных
+        // Удаляем бомбу из списка активных, чтобы на нее нельзя было нажать снова
+        // или чтобы бот ее не выбирал
         bombLocations.delete(`${row}-${col}`);
-        // Устанавливаем значение ячейки в EMPTY, чтобы она стала доступной
-        // (или можно оставить специальный маркер взорванной ячейки)
-        board[row][col] = EMPTY;
+        // Устанавливаем значение ячейки в EMPTY, чтобы ее нельзя было выбрать, но она была "пустой"
+        // Важно: если хотим чтобы ячейка осталась непроходимой, НЕ ставим EMPTY
+        // board[row][col] = 'exploded_bomb'; // Можно использовать маркер
+        // Оставим пока EMPTY, чтобы бот мог оценить поле после взрыва
+        board[row][col] = EMPTY; // Стала пустой и недоступной для клика из-за .bomb-revealed
 
-        // Очищаем соседние ячейки
+        // Очищаем соседние ячейки (только X и O)
         for (let rOffset = -1; rOffset <= 1; rOffset++) {
             for (let cOffset = -1; cOffset <= 1; cOffset++) {
-                if (rOffset === 0 && cOffset === 0) continue; // Пропускаем саму бомбу
+                if (rOffset === 0 && cOffset === 0) continue;
 
                 const nr = row + rOffset;
                 const nc = col + cOffset;
 
                 if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-                    // Не стираем другие бомбы взрывом, только фигуры X и O
+                    const neighborKey = `${nr}-${nc}`;
+                    // Стираем только X и O, не трогаем другие бомбы и пустые клетки
                     if (board[nr][nc] === PLAYER || board[nr][nc] === BOT) {
+                         console.log(`Очищена ячейка ${nr}-${nc} взрывом`);
                          board[nr][nc] = EMPTY;
-                         updateCell(nr, nc, EMPTY); // Обновляем визуал очищенной ячейки
-                         // Добавить эффект очистки?
+                         updateCell(nr, nc, EMPTY);
+                         // Добавить эффект очистки
                          const clearedCell = getCellElement(nr, nc);
                          clearedCell?.classList.add('exploded'); // Кратковременная анимация очистки
                          setTimeout(() => clearedCell?.classList.remove('exploded'), 500);
                     }
-                    // Если соседняя ячейка - тоже бомба, она не стирается
                 }
             }
         }
 
-        updateStatusMessage(`💥 Бум! Игрок ${triggerPlayer} попал на бомбу!`);
-        // Ход переходит другому игроку (это делается в handleCellClick или botMove)
+        updateStatusMessage(`💥 Бум! ${triggerPlayer === PLAYER ? 'Игрок' : 'Бот'} (${triggerPlayer}) попал на бомбу!`);
+        // Переход хода происходит в вызывающей функции (handleCellClick или botMove)
     }
 
 
@@ -198,9 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function switchPlayer() {
          if (gameOver) return;
         currentPlayer = (currentPlayer === PLAYER) ? BOT : PLAYER;
-        if (!isBotThinking) { // Не обновляем статус если бот еще "думает"
-             updateStatusMessage(`Ход ${currentPlayer === PLAYER ? 'игрока' : 'бота'} (${currentPlayer})`);
-        }
+        // Статус обновляется в makeMove или botMove после завершения хода
     }
 
     // --- Ход Бота ---
@@ -210,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
              return;
          }
 
-         updateStatusMessage('Бот ходит...');
+         updateStatusMessage('Бот ходит...'); // Обновляем статус перед поиском хода
 
          // --- Логика ИИ Бота ---
          let bestMove = findBestMove();
@@ -220,28 +249,23 @@ document.addEventListener('DOMContentLoaded', () => {
              const bombKey = `${row}-${col}`;
 
              if (bombLocations.has(bombKey)) {
-                 // Бот попал на бомбу!
                  triggerBomb(row, col, BOT);
                  // Ход возвращается игроку
                  if (!gameOver) {
                     switchPlayer(); // Вернули ход игроку
+                    updateStatusMessage(`Ход игрока (${PLAYER})`);
                  }
              } else {
-                 // Обычный ход бота
+                 // Обычный ход бота - запустит switchPlayer и обновление статуса внутри
                 makeMove(row, col, BOT);
              }
          } else {
-             // Это может случиться, если свободных клеток нет (ничья уже должна была быть объявлена)
-             console.error("Бот не смог найти ход!");
-             if (!checkDraw()) { // Если не ничья, что-то пошло не так
-                endGame('draw'); // Форсируем ничью в крайнем случае
+             console.error("Бот не смог найти ход! Возможно, ничья или ошибка.");
+             if (!checkDraw() && !gameOver) { // Если не ничья и игра не закончена
+                endGame('draw'); // Форсируем ничью в этом странном случае
              }
          }
          isBotThinking = false; // Бот закончил ход
-         // Статус обновится автоматически в switchPlayer или endGame
-         if (!gameOver && currentPlayer === PLAYER) {
-             updateStatusMessage(`Ход игрока (${PLAYER})`);
-         }
     }
 
     // --- Поиск лучшего хода для Бота (Умный, но сбалансированный) ---
@@ -254,63 +278,73 @@ document.addEventListener('DOMContentLoaded', () => {
         move = findWinningMove(PLAYER);
         if (move) return move;
 
-        // 3. Попытаться создать угрозу (3 в ряд с пустой клеткой)
+        // 3. Попытаться создать угрозу (WIN_LENGTH - 1 в ряд)
         move = findThreatMove(BOT);
         if (move) return move;
 
-        // 4. Попытаться заблокировать угрозу игрока (если не критично для победы)
-        move = findThreatMove(PLAYER); // Найти угрозу игрока
+        // 4. Попытаться заблокировать угрозу игрока
+        //    (Важно: бот должен блокировать только если у него нет своей немедленной угрозы)
+        move = findThreatMove(PLAYER);
         if (move) {
-            // Проверим, нет ли у бота более важного хода (например, своей угрозы)
-            let botThreat = findThreatMove(BOT, true); // Ищем только существующую угрозу
-            if(!botThreat) return move; // Блокируем игрока, если у бота нет своей угрозы
+             let botThreat = findThreatMove(BOT, true); // Ищем свою существующую угрозу
+             if(!botThreat) return move; // Блокируем, если у бота нет своих планов получше
         }
 
-
-        // 5. Занять стратегически важную клетку (ближе к центру или своим фигурам)
-        //    или просто случайную пустую клетку (не бомбу!)
+        // 5. Занять стратегически важную клетку или случайную безопасную
         let possibleMoves = [];
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
                 if (board[r][c] === EMPTY && !bombLocations.has(`${r}-${c}`)) {
-                    possibleMoves.push({ row: r, col: c, score: calculateStrategicScore(r, c) });
+                    // Убедимся, что на этой клетке нет уже показанной бомбы
+                    const cellElem = getCellElement(r, c);
+                    if (!cellElem || !cellElem.classList.contains('bomb-revealed')) {
+                        possibleMoves.push({ row: r, col: c, score: calculateStrategicScore(r, c) });
+                    }
                 }
             }
         }
 
-         // Если остались только бомбы - бот вынужден наступить на одну
+         // Если безопасных ходов нет, бот вынужден наступить на бомбу
          if (possibleMoves.length === 0) {
              let bombCells = [];
-             for (let r = 0; r < ROWS; r++) {
-                 for (let c = 0; c < COLS; c++) {
-                      if (board[r][c] === EMPTY && bombLocations.has(`${r}-${c}`)) {
-                          bombCells.push({ row: r, col: c });
-                      }
+             // Собираем все ячейки, которые являются скрытыми бомбами
+             for(const key of bombLocations) {
+                 const [r_str, c_str] = key.split('-');
+                 const r = parseInt(r_str);
+                 const c = parseInt(c_str);
+                 // Убедимся, что ячейка действительно пуста на доске (не X или O)
+                 if(board[r][c] === EMPTY) {
+                    bombCells.push({ row: r, col: c });
                  }
              }
+
              if (bombCells.length > 0) {
-                 // Выбираем случайную бомбу
+                 console.log("Бот вынужден наступить на бомбу.");
                  return bombCells[Math.floor(Math.random() * bombCells.length)];
              } else {
-                 return null; // Вообще нет ходов - ничья?
+                 // Этого не должно произойти, если checkDraw работает правильно
+                 console.error("Нет ни безопасных ходов, ни бомб для бота. Ничья?");
+                 return null;
              }
          }
-
 
         // Сортируем ходы по стратегической оценке (выше - лучше)
         possibleMoves.sort((a, b) => b.score - a.score);
 
-        // Добавляем немного случайности, чтобы бот не всегда делал одно и то же
-        // Выбираем из нескольких лучших ходов
-        const topMoves = possibleMoves.slice(0, Math.min(possibleMoves.length, 3)); // Берем до 3 лучших
-        return topMoves[Math.floor(Math.random() * topMoves.length)];
+        // Добавляем немного случайности, выбирая из нескольких лучших
+        const topN = Math.min(possibleMoves.length, 3); // Берем до 3 лучших
+        const randomIndex = Math.floor(Math.random() * topN);
+        return possibleMoves[randomIndex];
     }
 
     // --- Вспомогательная функция для поиска выигрышного/блокирующего хода ---
     function findWinningMove(player) {
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
-                if (board[r][c] === EMPTY && !bombLocations.has(`${r}-${c}`)) {
+                 const key = `${r}-${c}`;
+                 const cellElem = getCellElement(r, c);
+                 // Ищем пустую ячейку, которая не является скрытой или взорванной бомбой
+                 if (board[r][c] === EMPTY && !bombLocations.has(key) && (!cellElem || !cellElem.classList.contains('bomb-revealed'))) {
                     board[r][c] = player; // Временно ставим фигуру
                     if (checkWin(player)) {
                         board[r][c] = EMPTY; // Возвращаем как было
@@ -323,55 +357,78 @@ document.addEventListener('DOMContentLoaded', () => {
         return null; // Нет выигрышного хода
     }
 
-     // --- Вспомогательная функция для поиска хода, создающего угрозу (3 в ряд) ---
+     // --- Вспомогательная функция для поиска хода, создающего угрозу (WIN_LENGTH - 1) ---
      function findThreatMove(player, onlyExisting = false) {
+        let bestThreatMove = null;
+        let maxOwnPieces = -1; // Для выбора лучшей угрозы (где больше своих фигур уже стоит)
+
          for (let r = 0; r < ROWS; r++) {
              for (let c = 0; c < COLS; c++) {
-                  // Ищем пустую клетку, не бомбу
-                 if (board[r][c] === EMPTY && !bombLocations.has(`${r}-${c}`)) {
+                  const key = `${r}-${c}`;
+                  const cellElem = getCellElement(r, c);
+                  // Ищем пустую клетку, не бомбу (скрытую или взорванную)
+                 if (board[r][c] === EMPTY && !bombLocations.has(key) && (!cellElem || !cellElem.classList.contains('bomb-revealed'))) {
+                     if (onlyExisting) continue; // Пропускаем пустые, если ищем только существующие угрозы
+
                      board[r][c] = player; // Временно ставим фигуру
-                     // Проверяем, создает ли этот ход линию из 3-х с возможностью продления до 4-х
-                     if (createsPotentialWin(r, c, player)) {
-                         board[r][c] = EMPTY; // Возвращаем как было
-                         return { row: r, col: c };
+                     const potentialWinInfo = createsPotentialWin(r, c, player);
+                     if (potentialWinInfo && potentialWinInfo.count > maxOwnPieces) {
+                         // Нашли ход, создающий угрозу. Приоритет у угрозы с большим числом своих фигур.
+                         maxOwnPieces = potentialWinInfo.count;
+                         bestThreatMove = { row: r, col: c };
                      }
                      board[r][c] = EMPTY; // Возвращаем как было
                  }
-                 // Если ищем только существующую угрозу - проверяем текущие фигуры
-                 else if (onlyExisting && board[r][c] === player){
-                     if (createsPotentialWin(r, c, player, true)) {
-                         // Нашли существующую угрозу. Вернем координаты фигуры, создающей ее
-                         // (хотя для блокировки нужна пустая клетка рядом)
-                         // Эта логика требует доработки, если нужна именно блокировка угрозы
-                         // Проще использовать findWinningMove для игрока, чтобы найти куда ставить блок
+                 // Если ищем существующую угрозу, проверяем ячейки с фигурами 'player'
+                 else if (onlyExisting && board[r][c] === player) {
+                     const potentialWinInfo = createsPotentialWin(r, c, player, true); // Ищем открытую линию от этой фигуры
+                     if (potentialWinInfo && potentialWinInfo.count > maxOwnPieces) {
+                        // Нашли существующую угрозу. Запоминаем, что она есть.
+                        // Возвращать будем не эту ячейку, а просто факт наличия.
+                        // В `findBestMove` нам достаточно знать, что угроза ЕСТЬ.
+                        maxOwnPieces = potentialWinInfo.count;
+                        // bestThreatMove не обновляем, так как нам нужен ход в пустую клетку
                      }
                  }
              }
          }
-         return null;
+          // Если искали только существующую угрозу, возвращаем true/false (или кол-во фигур)
+         if (onlyExisting) return maxOwnPieces >= WIN_LENGTH - 1 ? true : null;
+         // Иначе возвращаем лучший найденный ход для создания угрозы
+         return bestThreatMove;
      }
 
      // --- Проверка, создает ли ход (r, c) потенциальную линию для победы ---
-     function createsPotentialWin(r, c, player, checkExisting = false) {
+     // Возвращает { count: число_фигур_в_линии, openEnds: число_открытых_концов } или null
+     function createsPotentialWin(r, c, player, checkExistingOnly = false) {
          const directions = [
              { dr: 0, dc: 1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }, { dr: 1, dc: -1 }
          ];
+         let bestPotential = null;
 
          for (const { dr, dc } of directions) {
-             let count = 1;
+             let count = 1; // Считаем текущую фигуру (или ту, что поставили временно)
              let openEnds = 0;
+             let lineCells = [{r,c}]; // Координаты клеток в линии
 
              // Проверяем в одном направлении
              for (let i = 1; i < WIN_LENGTH; i++) {
                  const nr = r + i * dr;
                  const nc = c + i * dc;
-                 if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === player) {
-                     count++;
-                 } else if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === EMPTY && !bombLocations.has(`${nr}-${nc}`)) {
-                     openEnds++;
-                     break; // Достаточно одного открытого конца
+                 if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                     const nKey = `${nr}-${nc}`;
+                     const nCellElem = getCellElement(nr, nc);
+                     if (board[nr][nc] === player) {
+                         count++;
+                         lineCells.push({r:nr, c:nc});
+                     } else if (board[nr][nc] === EMPTY && !bombLocations.has(nKey) && (!nCellElem || !nCellElem.classList.contains('bomb-revealed'))) {
+                         openEnds++;
+                         break; // Достаточно одного открытого конца с этой стороны
+                     } else {
+                         break; // Препятствие или граница
+                     }
                  } else {
-                     break; // Препятствие или граница
+                     break; // Граница поля
                  }
              }
 
@@ -379,32 +436,65 @@ document.addEventListener('DOMContentLoaded', () => {
              for (let i = 1; i < WIN_LENGTH; i++) {
                  const nr = r - i * dr;
                  const nc = c - i * dc;
-                 if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === player) {
-                     count++;
-                 } else if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === EMPTY && !bombLocations.has(`${nr}-${nc}`)) {
-                      openEnds++;
-                      break; // Достаточно одного открытого конца
-                 } else {
-                     break; // Препятствие или граница
-                 }
+                  if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                     const nKey = `${nr}-${nc}`;
+                     const nCellElem = getCellElement(nr, nc);
+                     if (board[nr][nc] === player) {
+                         count++;
+                          lineCells.push({r:nr, c:nc});
+                     } else if (board[nr][nc] === EMPTY && !bombLocations.has(nKey) && (!nCellElem || !nCellElem.classList.contains('bomb-revealed'))) {
+                         openEnds++;
+                         break; // Достаточно одного открытого конца с этой стороны
+                     } else {
+                         break; // Препятствие или граница
+                     }
+                  } else {
+                       break; // Граница поля
+                  }
              }
 
-             // Если у нас есть линия из WIN_LENGTH - 1 фигур и хотя бы один открытый конец
-             if (count === WIN_LENGTH - 1 && openEnds >= 1) {
-                 return true; // Нашли угрозу (потенциальную победу)
+            // Считается угрозой, если есть WIN_LENGTH - 1 своих фигур И хотя бы 1 открытый конец
+            // ИЛИ если есть WIN_LENGTH - 2 своих фигур И 2 открытых конца (двойная угроза)
+            // ИЛИ если есть WIN_LENGTH - 3 своих фигуры И 2 открытых конца (для блокировки противника тоже полезно)
+             if ((count === WIN_LENGTH - 1 && openEnds >= 1) || (count === WIN_LENGTH - 2 && openEnds >= 2)) {
+                 // Нашли угрозу. Выбираем лучшую (где больше своих фигур)
+                 if (!bestPotential || count > bestPotential.count) {
+                    bestPotential = { count, openEnds };
+                 }
              }
+              // Если проверяем только существующие, нам достаточно найти хотя бы одну угрозу
+              if (checkExistingOnly && bestPotential) return bestPotential;
          }
-         return false;
+         return bestPotential; // Возвращаем информацию о лучшей найденной угрозе (или null)
      }
 
 
     // --- Стратегическая оценка клетки ---
     function calculateStrategicScore(r, c) {
         let score = 0;
-        // Приоритет центральным клеткам (немного смещено из-за нечетных размеров)
-        const centerR = Math.floor(ROWS / 2);
-        const centerC = Math.floor(COLS / 2);
-        score -= Math.abs(r - centerR) + Math.abs(c - centerC); // Чем ближе к центру, тем меньше штраф
+        // Приоритет центральным клеткам
+        const centerR = (ROWS - 1) / 2.0;
+        const centerC = (COLS - 1) / 2.0;
+        // Уменьшаем штраф, чтобы не был слишком сильным
+        score -= (Math.abs(r - centerR) + Math.abs(c - centerC)) * 0.5;
+
+        // Бонус за создание потенциальных линий (проверка для бота)
+        board[r][c] = BOT; // Временно ставим
+        const threatInfo = createsPotentialWin(r, c, BOT);
+        if (threatInfo) {
+            if (threatInfo.count === WIN_LENGTH - 1) score += 50; // Сильная угроза
+            if (threatInfo.count === WIN_LENGTH - 2 && threatInfo.openEnds >= 2) score += 25; // Двойная угроза
+        }
+        board[r][c] = EMPTY; // Убираем
+
+         // Бонус за блокировку потенциальных линий игрока
+        board[r][c] = PLAYER; // Временно ставим за игрока
+        const playerThreatInfo = createsPotentialWin(r, c, PLAYER);
+         if (playerThreatInfo) {
+             if (playerThreatInfo.count === WIN_LENGTH - 1) score += 40; // Блокировка важной угрозы
+             if (playerThreatInfo.count === WIN_LENGTH - 2 && playerThreatInfo.openEnds >= 2) score += 20; // Блокировка двойной угрозы
+         }
+        board[r][c] = EMPTY; // Убираем
 
         // Добавляем очки за соседство со своими фигурами
         for (let dr = -1; dr <= 1; dr++) {
@@ -414,8 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nc = c + dc;
                 if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
                     if (board[nr][nc] === BOT) score += 2; // Бонус за соседа-бота
-                    // Небольшой штраф за соседство с игроком (менее важно, чем своя фигура)
-                    // else if (board[nr][nc] === PLAYER) score -= 1;
+                    else if (board[nr][nc] === PLAYER) score += 1; // Небольшой бонус за соседа-игрока (рядом с ним часто выгодно ставить)
                 }
             }
         }
@@ -436,23 +525,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (board[r][c] === player) {
                     for (const { dr, dc } of directions) {
                         const winningCells = [{ row: r, col: c }];
-                        let count = 1;
                         for (let i = 1; i < WIN_LENGTH; i++) {
                             const nr = r + i * dr;
                             const nc = c + i * dc;
                             if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === player) {
                                 winningCells.push({ row: nr, col: nc });
-                                count++;
                             } else {
-                                break; // Прервать проверку в этом направлении
+                                break;
                             }
                         }
-                        if (count === WIN_LENGTH) {
-                             // Проверяем, не идет ли линия дальше (для корректной подсветки только 4)
-                            // Эта проверка не обязательна, но делает подсветку точнее
-                            // if (winningCells.length > WIN_LENGTH) {
-                            //    winningCells = winningCells.slice(0, WIN_LENGTH);
-                            // }
+                        if (winningCells.length === WIN_LENGTH) {
                             return { winner: player, winningCells: winningCells };
                         }
                     }
@@ -466,20 +548,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkDraw() {
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
-                // Если есть пустая ячейка, которая НЕ бомба, игра не закончена
-                if (board[r][c] === EMPTY && !bombLocations.has(`${r}-${c}`)) {
-                    return false;
+                const key = `${r}-${c}`;
+                const cellElem = getCellElement(r,c);
+                // Если есть пустая ячейка, которая НЕ является скрытой ИЛИ взорванной бомбой
+                if (board[r][c] === EMPTY && !bombLocations.has(key) && (!cellElem || !cellElem.classList.contains('bomb-revealed'))) {
+                    return false; // Есть еще ходы
                 }
             }
         }
         // Если дошли сюда, все не-бомбовые ячейки заняты, и никто не выиграл
+        console.log("Проверка ничьей: ходов не осталось.");
         return true;
     }
 
     // --- Завершение Игры ---
     function endGame(winner, winningCells = []) {
         gameOver = true;
-        isBotThinking = false; // Остановить любые "раздумья"
+        isBotThinking = false;
 
         if (winner === 'draw') {
             updateStatusMessage('Ничья!');
@@ -491,7 +576,10 @@ document.addEventListener('DOMContentLoaded', () => {
             highlightWin(winningCells);
         }
 
-        newGameButton.disabled = false; // Разрешаем начать новую игру
+        // Можно показать все оставшиеся бомбы в конце игры
+        revealAllBombs();
+
+        newGameButton.disabled = false;
     }
 
     // --- Подсветка Выигрышной Линии ---
@@ -502,12 +590,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Показать все оставшиеся бомбы ---
+    function revealAllBombs() {
+        bombLocations.forEach(key => {
+            const [r_str, c_str] = key.split('-');
+            const r = parseInt(r_str);
+            const c = parseInt(c_str);
+            const cellElement = getCellElement(r, c);
+            if (cellElement && !cellElement.classList.contains('bomb-revealed')) {
+                 // Показываем только если она еще не была взорвана
+                cellElement.textContent = BOMB;
+                cellElement.classList.add('bomb-revealed');
+                // Можно добавить стиль для "неактивной" показанной бомбы
+                // cellElement.style.opacity = '0.6';
+            }
+        });
+    }
+
      // --- Обновление Вида Ячейки ---
      function updateCell(row, col, value) {
          const cellElement = getCellElement(row, col);
          if (cellElement) {
-             cellElement.classList.remove('x', 'o', 'bomb-revealed', 'win-cell'); // Убираем все классы состояния
-             cellElement.textContent = ''; // Очищаем содержимое
+             // Сначала сбросим все классы и содержимое, кроме базового 'cell' и data-атрибутов
+             const isRevealedBomb = cellElement.classList.contains('bomb-revealed');
+             cellElement.className = 'cell'; // Очищаем классы
+             cellElement.textContent = '';
+             // Восстанавливаем data-атрибуты, если они слетели (не должны)
+             cellElement.dataset.row = row;
+             cellElement.dataset.col = col;
+              // Если это была взорванная бомба, восстанавливаем ее класс
+             if (isRevealedBomb) {
+                 cellElement.classList.add('bomb-revealed');
+                 cellElement.textContent = BOMB; // Возвращаем иконку
+             }
+
 
              if (value === PLAYER) {
                  cellElement.classList.add('x');
@@ -515,40 +631,54 @@ document.addEventListener('DOMContentLoaded', () => {
              } else if (value === BOT) {
                  cellElement.classList.add('o');
                  cellElement.textContent = BOT;
-             } else if (value === EMPTY) {
-                 // Просто оставляем пустой
              }
-             // Бомбы не отображаются здесь напрямую
+             // Для EMPTY и BOMB (скрытых) ничего не делаем, они пустые
+             // Взорванные бомбы обрабатываются отдельно в triggerBomb и updateCell
          }
      }
 
     // --- Получение DOM-элемента ячейки ---
     function getCellElement(row, col) {
+        // Убедимся, что boardElement существует
+        if (!boardElement) return null;
         return boardElement.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
     }
 
-
     // --- Обновление Статуса ---
     function updateStatusMessage(message) {
-        statusMessageElement.textContent = message;
+        if (statusMessageElement) {
+            statusMessageElement.textContent = message;
+        }
     }
 
     // --- Обновление Счета ---
     function updateScoreDisplay() {
-        playerScoreElement.textContent = playerScore;
-        botScoreElement.textContent = botScore;
+        if (playerScoreElement && botScoreElement) {
+            playerScoreElement.textContent = playerScore;
+            botScoreElement.textContent = botScore;
+        }
     }
 
     // --- Слушатель Кнопки "Новая Игра" ---
-    newGameButton.addEventListener('click', initializeGame);
+    if (newGameButton) {
+        newGameButton.addEventListener('click', initializeGame);
+    } else {
+        console.error("Кнопка 'Новая игра' не найдена!");
+    }
 
     // --- Первый Запуск ---
+    // Вызываем initializeGame только после полной загрузки DOM
     initializeGame();
 
     // --- Опционально: Интеграция с Telegram ---
-    // if (window.Telegram && window.Telegram.WebApp) {
-    //     window.Telegram.WebApp.ready();
-    //     // Можно добавить кнопки или другие взаимодействия с Telegram UI
-    //     // window.Telegram.WebApp.MainButton.setText("Закрыть игру").show().onClick(() => window.Telegram.WebApp.close());
+    // try {
+    //     if (window.Telegram && window.Telegram.WebApp) {
+    //         window.Telegram.WebApp.ready();
+    //         console.log("Telegram WebApp SDK initialized");
+    //         // window.Telegram.WebApp.MainButton.setText("Закрыть игру").show().onClick(() => window.Telegram.WebApp.close());
+    //     }
+    // } catch (e) {
+    //     console.error("Telegram WebApp SDK error:", e);
     // }
-});
+
+}); // Конец document.addEventListener('DOMContentLoaded', ... )
