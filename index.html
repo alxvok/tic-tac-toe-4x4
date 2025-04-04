@@ -2,20 +2,33 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super TicTacToe</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Крестики-Нолики 8x6</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Опционально: скрипт Telegram Web App для будущей интеграции -->
+    <!-- <script src="https://telegram.org/js/telegram-web-app.js"></script> -->
 </head>
 <body>
-    <div class="container">
-        <div class="score-board">
-            <span id="player-score">Ты: 0</span>
-            <span id="bot-score">Бот: 0</span>
+    <div class="game-container">
+        <h1>Крестики-Нолики 8x6</h1>
+
+        <div class="game-info">
+            <div class="score">
+                Игрок (❌): <span id="player-score">0</span> - Бот (⭕): <span id="bot-score">0</span>
+            </div>
+            <div id="status-message" class="status">Ход игрока (❌)</div>
         </div>
-        <div id="game-board"></div>
-        <div id="status">Ты ходи</div>
-        <button id="new-game-button" style="display: none;">Новая игра</button>
+
+        <div id="game-board" class="board">
+            <!-- Ячейки будут добавлены через JavaScript -->
+        </div>
+
+        <div class="controls">
+            <button id="new-game-button">Новая игра</button>
+        </div>
+         <div class="bomb-info">💣 = Бомба (очищает соседей) | Нужно 4 в ряд</div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
