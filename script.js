@@ -29,48 +29,123 @@ for (let i = 0; i < 8; i++) {
 document.getElementById('new-game-button').addEventListener('click', resetGame);
 
 function makeMove(row, col) {
-  if (board[row][col] === null && !gameEnded) {
-    board[row][col] = currentPlayer;
-    updateUI();
-    const winInfo = checkWin(currentPlayer);
-    if (winInfo) {
-      const bombCell = checkForBomb(winInfo);
-      if (bombCell) {
-        explodeLine(winInfo, bombCell);
-        setTimeout(() => {
-          document.getElementById('status').textContent = `Бомбочка в ячейке [${bombCell.row + 1}, ${bombCell.col + 1}] взорвала линию!`;
-          setTimeout(() => {
-            document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
-          }, 1000);
-        }, 500);
-      } else {
-        highlightWinLine(winInfo);
-        if (currentPlayer === 'X') {
-          playerWins++;
-          document.getElementById('status').textContent = 'Ты победил!';
-        } else {
-          botWins++;
-          document.getElementById('status').textContent = 'Бот победил!';
-        }
-        document.getElementById('status').classList.add('win');
-        updateScore();
-        endGame();
-      }
-    } else if (board.flat().every(cell => cell !== null)) {
-      document.getElementById('status').textContent = 'Ничья!';
-      endGame();
-    } else {
-      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-      document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
-      if (currentPlayer === 'O') {
-        setTimeout(botMove, 500);
-      }
+  if (board[row][col] !== null || gameEnded) return;
+
+  board[row][col] = currentPlayer;
+  updateUI();
+  handleWinOrBomb(currentPlayer);
+
+  if (!gameEnded) {
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
+    if (currentPlayer === 'O') {
+      setTimeout(botMove, 500);
     }
   }
 }
 
 function botMove() {
   if (gameEnded) return;
+
+  // 1. Проверка на немедленную победу бота
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 6; j++) {
+      if (board[i][j] === null) {
+        board[i][j] = 'O';
+        const winInfo = checkWin('O');
+        if (winInfo) {
+          const bombCell = checkForBomb(winInfo);
+          if (!bombCell) { // Ходим, только если нет бомбочки
+            handleWinOrBomb('O');
+            return;
+          }
+        }
+        board[i][j] = null;
+      }
+    }
+  }
+
+  // 2. Блокировка немедленной победы игрока
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 6; j++) {
+      if (board[i][j] === null) {
+        board[i][j] = 'X';
+        if (checkWin('X')) {
+          board[i][j] = 'O';
+          updateUI();
+          currentPlayer = 'X';
+          document.getElementById('status').textContent = 'Ты ходи';
+          return;
+        }
+        board[i][j] = null;
+      }
+    }
+  }
+
+  // 3. Стратегический ход: ищем линию с 2 или 3 "O" и добавляем следующий
+  let bestMove = null;
+  let bestScore = -1;
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 6; j++) {
+      if (board[i][j] === null) {
+        board[i][j] = 'O';
+        let score = 0;
+
+        // Горизонтали
+        for (let k = 0; k <= 6 - 4; k++) {
+          let oCount = 0;
+          for (let m = k; m < k + 4; m++) {
+            if (board[i][m] === 'O') oCount++;
+          }
+          if (oCount >= 2) score += oCount;
+        }
+
+        // Вертикали
+        for (let k = 0; k <= 8 - 4; k++) {
+          let oCount = 0;
+          for (let m = k; m < k + 4; m++) {
+            if (board[m][j] === 'O') oCount++;
+          }
+          if (oCount >= 2) score += oCount;
+        }
+
+        // Главная диагональ
+        for (let k = -Math.min(i, j); k <= Math.min(8 - i - 4, 6 - j - 4); k++) {
+          let oCount = 0;
+          for (let m = 0; m < 4; m++) {
+            if (board[i + k + m][j + k + m] === 'O') oCount++;
+          }
+          if (oCount >= 2) score += oCount;
+        }
+
+        // Побочная диагональ
+        for (let k = -Math.min(i, 6 - j - 1); k <= Math.min(8 - i - 4, j - 3); k++) {
+          let oCount = 0;
+          for (let m = 0; m < 4; m++) {
+            if (board[i + k + m][j - k - m] === 'O') oCount++;
+          }
+          if (oCount >= 2) score += oCount;
+        }
+
+        board[i][j] = null;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = [i, j];
+        }
+      }
+    }
+  }
+
+  if (bestMove) {
+    const [row, col] = bestMove;
+    board[row][col] = 'O';
+    updateUI();
+    currentPlayer = 'X';
+    document.getElementById('status').textContent = 'Ты ходи';
+    return;
+  }
+
+  // 4. Случайный ход
   let emptyCells = [];
   board.forEach((row, i) => {
     row.forEach((cell, j) => {
@@ -79,7 +154,10 @@ function botMove() {
   });
   if (emptyCells.length > 0) {
     const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-    makeMove(row, col);
+    board[row][col] = 'O';
+    updateUI();
+    currentPlayer = 'X';
+    document.getElementById('status').textContent = 'Ты ходи';
   }
 }
 
@@ -149,6 +227,37 @@ function checkForBomb(winInfo) {
   return null;
 }
 
+function handleWinOrBomb(player) {
+  const winInfo = checkWin(player);
+  if (winInfo) {
+    const bombCell = checkForBomb(winInfo);
+    if (bombCell) {
+      explodeLine(winInfo, bombCell);
+      setTimeout(() => {
+        document.getElementById('status').textContent = `Бомбочка в ячейке [${bombCell.row + 1}, ${bombCell.col + 1}] взорвала линию!`;
+        setTimeout(() => {
+          document.getElementById('status').textContent = currentPlayer === 'X' ? 'Ты ходи' : 'Ходит бот';
+        }, 1000);
+      }, 500);
+    } else {
+      highlightWinLine(winInfo);
+      if (player === 'X') {
+        playerWins++;
+        document.getElementById('status').textContent = 'Ты победил!';
+      } else {
+        botWins++;
+        document.getElementById('status').textContent = 'Бот победил!';
+      }
+      document.getElementById('status').classList.add('win');
+      updateScore();
+      endGame();
+    }
+  } else if (board.flat().every(cell => cell !== null)) {
+    document.getElementById('status').textContent = 'Ничья!';
+    endGame();
+  }
+}
+
 function explodeLine(winInfo, bombCell) {
   const { type, startRow, startCol, row, col } = winInfo;
   let cellsToExplode = [];
@@ -165,15 +274,19 @@ function explodeLine(winInfo, bombCell) {
     }
   }
 
-  // Анимация взрыва
   cellsToExplode.forEach(({ cell, row, col }) => {
     cell.classList.add('explode');
     if (row === bombCell.row && col === bombCell.col) {
       cell.classList.add('bomb-explode');
+      setTimeout(() => {
+        cell.textContent = '💣';
+      }, 500);
     }
     setTimeout(() => {
       board[row][col] = null;
-      cell.textContent = '';
+      if (row !== bombCell.row || col !== bombCell.col) {
+        cell.textContent = '';
+      }
       cell.classList.remove('explode', 'bomb-explode');
     }, 500);
   });
@@ -219,7 +332,6 @@ function resetGame() {
   document.getElementById('status').textContent = 'Ты ходи';
   document.getElementById('status').classList.remove('win');
   document.getElementById('new-game-button').style.display = 'none';
-  // Перемещаем бомбочки
   bombs.length = 0;
   while (bombs.length < 5) {
     const row = Math.floor(Math.random() * 8);
