@@ -107,18 +107,6 @@ body {
     animation: glow 1s infinite alternate;
 }
 
-#new-game-button {
-    margin-top: 20px;
-    padding: 10px 20px;
-    font-size: 18px;
-    font-weight: bold;
-    color: #fff;
-    background-color: #ff4500;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
 
 #new-game-button:hover {
     background-color: #e03e00;
