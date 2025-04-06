@@ -1,133 +1,8 @@
-// --- Обновление Статуса ---
-// (Сама функция updateStatusMessage остается без изменений)
-function updateStatusMessage(message, type = 'info') { // type: info, thinking, win, draw, bomb
-    if (!statusMessageElement) return;
-    statusMessageElement.textContent = message;
-    statusMessageElement.classList.remove('thinking', 'game-won', 'game-draw', 'bomb-hit');
-    if (type === 'thinking') statusMessageElement.classList.add('thinking');
-    else if (type === 'win') statusMessageElement.classList.add('game-won');
-    else if (type === 'draw') statusMessageElement.classList.add('game-draw');
-    else if (type === 'bomb') statusMessageElement.classList.add('bomb-hit');
-}
-
-// --- Инициализация Игры ---
-function initializeGame() {
-    // ... (проверки элементов, сброс состояния) ...
-    if (!gameContainer || !boardElement || !statusMessageElement || !playerScoreElement || !botScoreElement || !newGameButton) { console.error("DOM Error"); return; }
-    // ... (сброс доски, бомб и т.д.) ...
-    gameContainer.classList.remove('game-over-active');
-    placeBombs(); renderBoard();
-    // ИЗМЕНЕНО: Ставим "Ход игрока"
-    updateStatusMessage('Ход игрока', 'info');
-    updateScoreDisplay(false);
-    newGameButton.disabled = true;
-    console.log("Game Initialized (8x6). Bombs:", Array.from(bombLocations));
-}
-
-// --- Обработка Клика по Ячейке ---
-function handleCellClick(event) {
-    if (gameOver || isBotThinking || currentPlayer !== PLAYER) return;
-    const cell = event.target.closest('.cell'); if (!cell) return;
-    const row = parseInt(cell.dataset.row); const col = parseInt(cell.dataset.col); if (isNaN(row)||isNaN(col)||row<0||row>=ROWS||col<0||col>=COLS) return;
-    const bombKey = `${row}-${col}`; if (board[row][col] !== EMPTY || cell.classList.contains('bomb-revealed')) return;
-
-    if (bombLocations.has(bombKey)) {
-        triggerBomb(row, col, PLAYER); // triggerBomb теперь просто пишет "Бум!"
-        if (!gameOver) {
-             switchPlayer(); isBotThinking = true;
-             // ИЗМЕНЕНО: Ставим статус "Бот думает..." ПОСЛЕ "Бум!"
-             // Небольшая задержка, чтобы "Бум!" был виден
-             setTimeout(() => {
-                 if (!gameOver) updateStatusMessage('Бот думает...', 'thinking');
-             }, 100); // Короткая пауза после "Бум!"
-             setTimeout(botMove, 700); // Общая задержка до хода бота
-         }
-    } else {
-        makeMove(row, col, PLAYER);
-    }
-}
-
- // --- Совершение Хода ---
- function makeMove(row, col, player) {
-    if (gameOver || board[row][col] !== EMPTY) return false;
-    board[row][col] = player; updateCell(row, col, player);
-    const winInfo = checkWin(player);
-    if (winInfo) { endGame(player, winInfo.winningCells); }
-    else if (checkDraw()) { endGame('draw'); }
-    else {
-        switchPlayer();
-        if (player === PLAYER && !gameOver) { // Ход игрока завершен
-             isBotThinking = true; updateStatusMessage('Бот думает...', 'thinking'); // Статус ОК
-             setTimeout(botMove, Math.random() * 500 + 300);
-         } else if (player === BOT && !gameOver) { // Ход бота завершен
-             // ИЗМЕНЕНО: Ставим "Ход игрока"
-             updateStatusMessage('Ход игрока', 'info');
-         }
-    } return true; }
-
-// --- Активация Бомбы ---
-function triggerBomb(row, col, triggerPlayer) {
-    console.log(`Bomb ${row}-${col} by ${getDisplayName(triggerPlayer)}`);
-    const bombCell = getCellElement(row, col); if (bombCell) { bombCell.textContent = BOMB; bombCell.classList.add('bomb-revealed', 'exploded'); setTimeout(() => bombCell?.classList.remove('exploded'), 600); } bombLocations.delete(`${row}-${col}`); board[row][col] = EMPTY;
-    // Очистка соседей (без изменений)
-    for(let rO=-1;rO<=1;rO++){for(let cO=-1;cO<=1;cO++){if(rO===0&&cO===0)continue; const nr=row+rO; const nc=col+cO; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){if(board[nr][nc]===PLAYER||board[nr][nc]===BOT){board[nr][nc]=EMPTY; updateCell(nr,nc,EMPTY); const cCell=getCellElement(nr,nc); cCell?.classList.add('exploded'); setTimeout(()=>cCell?.classList.remove('exploded'),600);}}}}
-
-    // ИЗМЕНЕНО: Ставим только "Бум!"
-    updateStatusMessage('💥 Бум!', 'bomb');
-}
-
-
-// --- Ход Бота ---
-function botMove() {
-    if (gameOver || currentPlayer !== BOT) { isBotThinking = false; return; }
-    // updateStatusMessage('Бот ходит...', 'thinking'); // Можно убрать, т.к. уже стоит "Бот думает..."
-    let bestMove = findBestMove();
-    if (bestMove) { const { row, col } = bestMove; const bombKey = `${row}-${col}`;
-        setTimeout(() => { // Задержка перед действием
-             if (gameOver) { isBotThinking = false; return; }
-            if (bombLocations.has(bombKey)) {
-                triggerBomb(row, col, BOT); // Просто "Бум!"
-                if (!gameOver) {
-                    switchPlayer(); isBotThinking = false;
-                    // ИЗМЕНЕНО: Ставим "Ход игрока" ПОСЛЕ "Бум!"
-                     setTimeout(() => {
-                         if (!gameOver) updateStatusMessage('Ход игрока', 'info');
-                     }, 100); // Короткая пауза после "Бум!"
-                } else { isBotThinking = false; }
-            } else {
-                const moveMade = makeMove(row, col, BOT);
-                // Статус "Ход игрока" установится внутри makeMove
-                if(moveMade && !gameOver){ isBotThinking = false; }
-                else { isBotThinking = false; }
-            }
-        }, 250);
-    } else { /* ... (обработка ошибки/ничьи без изменений) ... */ console.error("Bot can't find move!"); isBotThinking = false; if (!checkDraw() && !gameOver) { endGame('draw'); } else if (!gameOver) { endGame('draw'); } } }
-
-// --- Завершение Игры ---
-function endGame(winner, winningCells = []) {
-    gameOver = true; isBotThinking = false;
-    gameContainer?.classList.add('game-over-active');
-
-    if (winner === 'draw') {
-        updateStatusMessage('Ничья!', 'draw'); // Статус ОК
-    } else if (winner === PLAYER || winner === BOT) {
-        updateStatusMessage(`${getDisplayName(winner)} победил!`, 'win'); // Статус ОК
-        if (winner === PLAYER) playerScore++; else botScore++;
-        updateScoreDisplay(true);
-        highlightWin(winningCells);
-    }
-    revealAllBombs();
-    newGameButton.disabled = false;
-}
-
-// ... (Остальные функции без изменений: ИИ, проверки, отрисовка и т.д.) ...
-
-// --- Полный код для копирования ---
-// (Включая неизмененные функции для полноты)
 document.addEventListener('DOMContentLoaded', () => {
     // --- Константы ---
     const ROWS = 8; const COLS = 6; const WIN_LENGTH = 4; const BOMB_COUNT = 8;
     const PLAYER = 'X'; const BOT = 'O'; const BOMB = '💣'; const EMPTY = '';
+    const BOOM_MESSAGE_DURATION = 1000; // Длительность показа "Бум!" в мс
 
     // --- DOM Элементы ---
     const gameContainer = document.querySelector('.game-container');
@@ -140,13 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Состояние Игры ---
     let board = []; let bombLocations = new Set(); let currentPlayer = PLAYER;
     let gameOver = false; let playerScore = 0; let botScore = 0; let isBotThinking = false;
+    let statusTimeoutId = null; // Для отмены предыдущей смены статуса после Бум!
 
     // --- Хелпер: Имя игрока ---
     function getDisplayName(player) { return player === PLAYER ? 'Игрок' : 'Бот'; }
 
     // --- Обновление Статуса ---
-    function updateStatusMessage(message, type = 'info') { // type: info, thinking, win, draw, bomb
+    function updateStatusMessage(message, type = 'info') {
         if (!statusMessageElement) return;
+        // Отменяем предыдущий запланированный таймаут смены статуса, если он есть
+        if (statusTimeoutId) {
+            clearTimeout(statusTimeoutId);
+            statusTimeoutId = null;
+        }
         statusMessageElement.textContent = message;
         statusMessageElement.classList.remove('thinking', 'game-won', 'game-draw', 'bomb-hit');
         if (type === 'thinking') statusMessageElement.classList.add('thinking');
@@ -162,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bombLocations.clear(); gameOver = false; isBotThinking = false; currentPlayer = PLAYER;
         gameContainer.classList.remove('game-over-active');
         placeBombs(); renderBoard();
-        updateStatusMessage('Ход игрока', 'info'); // ИЗМЕНЕНО
+        updateStatusMessage('Ход игрока', 'info');
         updateScoreDisplay(false);
         newGameButton.disabled = true;
         console.log("Game Initialized (8x6). Bombs:", Array.from(bombLocations));
@@ -182,13 +63,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const bombKey = `${row}-${col}`; if (board[row][col] !== EMPTY || cell.classList.contains('bomb-revealed')) return;
 
         if (bombLocations.has(bombKey)) {
-            triggerBomb(row, col, PLAYER); // "Бум!"
+            triggerBomb(row, col, PLAYER); // Ставит "Бум!"
             if (!gameOver) {
                  switchPlayer(); isBotThinking = true;
-                 setTimeout(() => { // Пауза перед "Бот думает..."
+                 // Запланировать смену статуса на "Бот думает..." через время
+                 statusTimeoutId = setTimeout(() => {
                      if (!gameOver) updateStatusMessage('Бот думает...', 'thinking');
-                 }, 100);
-                 setTimeout(botMove, 700); // Общая пауза
+                     statusTimeoutId = null; // Очистить ID после выполнения
+                 }, BOOM_MESSAGE_DURATION); // Задержка равна длительности показа "Бум!"
+
+                 // Запустить ход бота чуть позже, чем сменится статус
+                 setTimeout(botMove, BOOM_MESSAGE_DURATION + 100);
              }
         } else {
             makeMove(row, col, PLAYER);
@@ -208,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  isBotThinking = true; updateStatusMessage('Бот думает...', 'thinking');
                  setTimeout(botMove, Math.random() * 500 + 300);
              } else if (player === BOT && !gameOver) { // Бот сходил
-                 updateStatusMessage('Ход игрока', 'info'); // ИЗМЕНЕНО
+                 updateStatusMessage('Ход игрока', 'info');
              }
         } return true; }
 
@@ -217,7 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Bomb ${row}-${col} by ${getDisplayName(triggerPlayer)}`);
         const bombCell = getCellElement(row, col); if (bombCell) { bombCell.textContent = BOMB; bombCell.classList.add('bomb-revealed', 'exploded'); setTimeout(() => bombCell?.classList.remove('exploded'), 600); } bombLocations.delete(`${row}-${col}`); board[row][col] = EMPTY;
         for(let rO=-1;rO<=1;rO++){for(let cO=-1;cO<=1;cO++){if(rO===0&&cO===0)continue; const nr=row+rO; const nc=col+cO; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){if(board[nr][nc]===PLAYER||board[nr][nc]===BOT){board[nr][nc]=EMPTY; updateCell(nr,nc,EMPTY); const cCell=getCellElement(nr,nc); cCell?.classList.add('exploded'); setTimeout(()=>cCell?.classList.remove('exploded'),600);}}}}
-        updateStatusMessage('💥 Бум!', 'bomb'); // ИЗМЕНЕНО: Только "Бум!"
+        // Ставим "Бум!", следующий статус будет установлен через setTimeout
+        updateStatusMessage('💥 Бум!', 'bomb');
     }
 
     // --- Переключение Игрока ---
@@ -226,26 +112,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Ход Бота ---
     function botMove() {
         if (gameOver || currentPlayer !== BOT) { isBotThinking = false; return; }
-        // updateStatusMessage('Бот ходит...', 'thinking'); // Можно убрать
+        // updateStatusMessage('Бот ходит...', 'thinking'); // Не обязательно менять
         let bestMove = findBestMove();
         if (bestMove) { const { row, col } = bestMove; const bombKey = `${row}-${col}`;
-            setTimeout(() => {
+            setTimeout(() => { // Задержка перед действием
                  if (gameOver) { isBotThinking = false; return; }
                 if (bombLocations.has(bombKey)) {
-                    triggerBomb(row, col, BOT); // "Бум!"
+                    triggerBomb(row, col, BOT); // Ставит "Бум!"
                     if (!gameOver) {
-                        switchPlayer(); isBotThinking = false;
-                         setTimeout(() => { // Пауза перед "Ход игрока"
+                        switchPlayer(); isBotThinking = false; // Передали ход, сняли блокировку
+                         // Запланировать смену статуса на "Ход игрока" через время
+                         statusTimeoutId = setTimeout(() => {
                              if (!gameOver) updateStatusMessage('Ход игрока', 'info');
-                         }, 100);
+                             statusTimeoutId = null;
+                         }, BOOM_MESSAGE_DURATION);
                     } else { isBotThinking = false; }
                 } else {
                     const moveMade = makeMove(row, col, BOT);
                     // Статус "Ход игрока" ставится в makeMove
+                    // Снимаем блокировку только если ход сделан и игра не окончена
                     if(moveMade && !gameOver){ isBotThinking = false; }
-                    else { isBotThinking = false; }
+                    else { isBotThinking = false; } // Снимаем и если не сделан или игра окончена
                 }
-            }, 250); // Пауза перед действием бота
+            }, 250); // Задержка перед действием бота
         } else { console.error("Bot can't find move!"); isBotThinking = false; if (!checkDraw() && !gameOver) { endGame('draw'); } else if (!gameOver) { endGame('draw'); } } }
 
     // --- ИИ Бота ---
@@ -265,13 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame(winner, winningCells = []) {
         gameOver = true; isBotThinking = false;
         gameContainer?.classList.add('game-over-active');
-        if (winner === 'draw') {
-            updateStatusMessage('Ничья!', 'draw'); // Статус ОК
-        } else if (winner === PLAYER || winner === BOT) {
-            updateStatusMessage(`${getDisplayName(winner)} победил!`, 'win'); // Статус ОК
-            if (winner === PLAYER) playerScore++; else botScore++;
-            updateScoreDisplay(true); highlightWin(winningCells);
-        }
+        if (winner === 'draw') { updateStatusMessage('Ничья!', 'draw'); }
+        else if (winner === PLAYER || winner === BOT) { updateStatusMessage(`${getDisplayName(winner)} победил!`, 'win'); if (winner === PLAYER) playerScore++; else botScore++; updateScoreDisplay(true); highlightWin(winningCells); }
         revealAllBombs(); newGameButton.disabled = false;
     }
 
