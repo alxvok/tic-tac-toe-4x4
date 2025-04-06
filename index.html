@@ -9,24 +9,19 @@
 </head>
 <body>
     <div class="game-container">
-        <h1>Крестики-Нолики 8x6</h1>
-
-        <!-- ИЗМЕНЕННЫЙ БЛОК СЧЕТА -->
         <div class="game-info">
             <div class="score-container">
                 <div class="score-box player-score-box">
-                    <span class="player-label">Игрок ❌</span>
+                    <span class="player-label">Игрок</span>
                     <span id="player-score" class="score-number">0</span>
                 </div>
                 <div class="score-box bot-score-box">
-                    <span class="player-label">Бот ⭕</span>
+                    <span class="player-label">Бот</span>
                     <span id="bot-score" class="score-number">0</span>
                 </div>
             </div>
-            <div id="status-message" class="status">Ход игрока (❌)</div>
+            <div id="status-message" class="status">Ход игрока (X)</div>
         </div>
-        <!-- КОНЕЦ ИЗМЕНЕННОГО БЛОКА -->
-
         <div id="game-board" class="board">
             <!-- Ячейки будут добавлены через JavaScript -->
         </div>
@@ -34,9 +29,7 @@
         <div class="controls">
             <button id="new-game-button">Новая игра</button>
         </div>
-         <div class="bomb-info">💣 очищает соседние клетки | нужно 4 в ряд</div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
