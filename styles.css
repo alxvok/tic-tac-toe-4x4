@@ -4,275 +4,129 @@
     --cell-bg: #ffffff;
     --cell-border: #d8dde2;
     --cell-hover-bg: #e8ebee;
-    --player-x-color: #ff4136;
-    --player-o-color: #0074d9;
+    --player-x-color: #ff4136; /* Красный для X */
+    --player-o-color: #0074d9; /* Синий для O */
     --bomb-color: #333333;
     --bomb-revealed-bg: #e0e0e0;
     --win-highlight-bg: rgba(255, 215, 0, 0.55);
     --text-color: #333;
-    --status-color: #555;
+    --status-color: #495057; /* Чуть темнее для статуса */
+    --status-bg: #e9ecef; /* Фон для статуса */
     --button-bg: #007bff;
     --button-text: #ffffff;
     --button-hover-bg: #0056b3;
     --container-bg: #ffffff;
     --shadow-color: rgba(0, 0, 0, 0.1);
-    --board-shadow-color: rgba(0, 0, 0, 0.08); /* Тень для доски */
+    --board-shadow-color: rgba(0, 0, 0, 0.08);
 
     --cell-size: min(max(42px, 13vw), 65px);
     --cell-gap: 4px;
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    -webkit-tap-highlight-color: transparent;
-}
-
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { scroll-behavior: smooth; }
-
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-                 Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    background-color: #e9eef5;
-    color: var(--text-color);
-    padding: 15px;
-    overflow-y: auto;
-    line-height: 1.5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    display: flex; justify-content: center; align-items: flex-start;
+    min-height: 100vh; background-color: #e9eef5; color: var(--text-color);
+    padding: 15px; overflow-y: auto; line-height: 1.5;
 }
 
 .game-container {
-    width: 100%;
-    max-width: 500px;
-    background-color: var(--container-bg);
-    padding: clamp(15px, 4vw, 25px);
-    border-radius: 16px;
-    box-shadow: 0 6px 20px var(--shadow-color);
-    text-align: center;
+    width: 100%; max-width: 500px; background-color: var(--container-bg);
+    padding: clamp(15px, 4vw, 25px); border-radius: 16px;
+    box-shadow: 0 6px 20px var(--shadow-color); text-align: center;
 }
-/* Класс для анимации кнопки Новая игра */
-.game-container.game-over-active #new-game-button:not(:disabled) {
-    animation: buttonPulse 1.5s infinite ease-in-out;
-}
+.game-container.game-over-active #new-game-button:not(:disabled) { animation: buttonPulse 1.5s infinite ease-in-out; }
 
+h1 { font-size: clamp(1.6rem, 5.5vw, 2.2rem); margin-bottom: 20px; color: #2c3e50; font-weight: 600; }
 
-h1 {
-    font-size: clamp(1.6rem, 5.5vw, 2.2rem);
-    margin-bottom: 20px; /* Увеличил отступ */
-    color: #2c3e50;
-    font-weight: 600;
-}
+/* --- Стили Счетчика --- */
+.game-info { margin-bottom: 25px; }
+.score-container { display: flex; justify-content: space-around; align-items: center; margin-bottom: 18px; /* Немного увеличил отступ */ gap: 15px; }
+.score-box { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; border: 1px solid #e9ecef; min-width: 120px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.player-label { display: block; font-size: clamp(0.85rem, 2.8vw, 1rem); color: #495057; margin-bottom: 4px; font-weight: 500; }
+.score-number { display: block; font-size: clamp(1.5rem, 5vw, 1.8rem); font-weight: 700; color: #212529; transition: color 0.3s ease, transform 0.3s ease; transform: scale(1); }
+.score-number.updated { transform: scale(1.15); color: var(--button-bg); }
 
-/* --- НОВЫЕ СТИЛИ СЧЕТЧИКА --- */
-.game-info {
-    margin-bottom: 25px; /* Увеличил отступ */
-}
-
-.score-container {
-    display: flex;
-    justify-content: space-around; /* Равномерно распределить блоки счета */
-    align-items: center;
-    margin-bottom: 15px; /* Отступ под счетчиком */
-    gap: 15px; /* Пространство между блоками */
-}
-
-.score-box {
-    background-color: #f8f9fa; /* Легкий фон для блока */
-    padding: 8px 15px;
-    border-radius: 8px;
-    border: 1px solid #e9ecef; /* Тонкая граница */
-    min-width: 120px; /* Минимальная ширина блока */
-    text-align: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
-.player-label {
-    display: block; /* Метка над числом */
-    font-size: clamp(0.85rem, 2.8vw, 1rem);
-    color: #495057; /* Цвет метки */
-    margin-bottom: 4px;
-    font-weight: 500;
-}
-
-.score-number {
-    display: block;
-    font-size: clamp(1.5rem, 5vw, 1.8rem); /* Увеличенный размер цифр */
-    font-weight: 700; /* Жирные цифры */
-    color: #212529; /* Темный цвет цифр */
-    /* Анимация изменения счета */
-    transition: color 0.3s ease, transform 0.3s ease;
-    transform: scale(1); /* Базовый размер */
-}
-/* Класс для анимации */
-.score-number.updated {
-    transform: scale(1.15); /* Слегка увеличить при обновлении */
-    color: var(--button-bg); /* Подсветить цветом кнопки */
-}
-
-/* --- КОНЕЦ НОВЫХ СТИЛЕЙ СЧЕТЧИКА --- */
-
+/* --- УЛУЧШЕННЫЕ СТИЛИ СТАТУСА --- */
 .status {
-    min-height: 1.4em;
-    font-style: italic;
+    min-height: auto; /* Убираем фикс. высоту, будет определяться паддингом */
+    font-style: normal; /* Убрали курсив */
     color: var(--status-color);
-    transition: color 0.3s ease;
-    font-size: clamp(0.9rem, 3vw, 1.05rem); /* Чуть крупнее статус */
+    font-size: clamp(0.95rem, 3.1vw, 1.1rem); /* Слегка увеличен */
+    font-weight: 500; /* Средняя жирность */
+    background-color: var(--status-bg); /* Фон таблетки */
+    padding: 6px 15px; /* Внутренние отступы */
+    border-radius: 20px; /* Сильное скругление для таблетки */
+    display: inline-block; /* Чтобы фон был по размеру текста */
+    max-width: 90%; /* Ограничение ширины на всякий случай */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+/* Доп. стили для статуса во время ожидания/окончания */
+.status.thinking { /* Если захочется выделить ожидание */
+   /* background-color: #ffc107; */ /* Пример: желтый фон */
+   /* color: #333; */
+}
+.status.game-won {
+   background-color: #ffc107; /* Золотой фон при победе */
+   color: #333;
+   font-weight: 600;
+}
+.status.game-draw {
+    background-color: #6c757d; /* Серый фон при ничьей */
+    color: white;
+}
+.status.bomb-hit {
+    background-color: var(--player-x-color); /* Красный фон при взрыве */
+    color: white;
 }
 
-.bomb-info {
-    font-size: clamp(0.8rem, 2.6vw, 0.95rem);
-    margin-top: 15px;
-    color: #7f8c8d;
-}
+
+/* --- КОНЕЦ СТИЛЕЙ СТАТУСА --- */
+
+.bomb-info { font-size: clamp(0.8rem, 2.6vw, 0.95rem); margin-top: 18px; color: #7f8c8d; } /* Увеличен отступ */
 
 /* --- Игровое поле --- */
 .board {
-    display: grid;
-    gap: var(--cell-gap);
-    background-color: var(--board-bg);
-    border: 1px solid var(--cell-border);
-    border-radius: 10px;
-    margin: 0 auto;
-    width: fit-content;
-    padding: 6px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 12px var(--board-shadow-color); /* ДОБАВЛЕНА ТЕНЬ ПОЛЯ */
+    display: grid; gap: var(--cell-gap); background-color: var(--board-bg);
+    border: 1px solid var(--cell-border); border-radius: 10px; margin: 0 auto;
+    width: fit-content; padding: 6px; margin-bottom: 25px;
+    box-shadow: 0 4px 12px var(--board-shadow-color);
 }
-
-.cell {
-    width: var(--cell-size);
-    height: var(--cell-size);
-    background-color: var(--cell-bg);
-    border: 1px solid var(--cell-border);
-    border-radius: 8px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: calc(var(--cell-size) * 0.65);
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.15s ease;
-    user-select: none;
-    position: relative;
-}
-
-.cell:not(.x):not(.o):not(.bomb-revealed):not(.exploded):hover {
-    background-color: var(--cell-hover-bg);
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.cell:not(.x):not(.o):not(.bomb-revealed):not(.exploded):active {
-    transform: scale(0.92);
-    background-color: #dce1e6;
-}
-
-.cell.x, .cell.o {
-    cursor: not-allowed;
-    animation: placeMark 0.2s ease-out;
-}
-
-@keyframes placeMark {
-    from { transform: scale(0.5); opacity: 0.5; }
-    to { transform: scale(1); opacity: 1; }
-}
-
-.cell.x { color: var(--player-x-color); }
-.cell.o { color: var(--player-o-color); }
-
-.cell.bomb-revealed {
-    color: var(--bomb-color);
-    font-size: calc(var(--cell-size) * 0.55);
-    cursor: not-allowed;
-    background-color: var(--bomb-revealed-bg);
-}
+.cell { width: var(--cell-size); height: var(--cell-size); background-color: var(--cell-bg); border: 1px solid var(--cell-border); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: calc(var(--cell-size) * 0.65); font-weight: bold; cursor: pointer; transition: background-color 0.2s ease, transform 0.15s ease; user-select: none; position: relative; }
+.cell:not(.x):not(.o):not(.bomb-revealed):not(.exploded):hover { background-color: var(--cell-hover-bg); transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.cell:not(.x):not(.o):not(.bomb-revealed):not(.exploded):active { transform: scale(0.92); background-color: #dce1e6; }
+.cell.x, .cell.o { cursor: not-allowed; animation: placeMark 0.2s ease-out; }
+@keyframes placeMark { from { transform: scale(0.5); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+.cell.x { color: var(--player-x-color); } .cell.o { color: var(--player-o-color); }
+.cell.bomb-revealed { color: var(--bomb-color); font-size: calc(var(--cell-size) * 0.55); cursor: not-allowed; background-color: var(--bomb-revealed-bg); }
 .cell.bomb-revealed:hover { transform: none; box-shadow: none; }
-
-.cell.exploded {
-    animation: explosion 0.6s ease-out forwards;
-    cursor: not-allowed;
-}
-@keyframes explosion {
-    0% { transform: scale(1); background-color: #ffdddd;}
-    30% { transform: scale(1.15); background-color: #ffcccc; }
-    100% { transform: scale(1); background-color: var(--cell-bg); }
-}
-.cell.bomb-revealed.exploded {
-     animation: bombExplosion 0.6s ease-out forwards;
-}
-@keyframes bombExplosion {
-    0% { transform: scale(1); background-color: #ffc8c8;}
-    30% { transform: scale(1.15); background-color: #ffaaaa; }
-    100% { transform: scale(1); background-color: var(--bomb-revealed-bg); }
-}
-
-.cell.win-cell {
-    background-color: var(--win-highlight-bg);
-    animation: winPulse 0.7s infinite alternate ease-in-out;
-    position: relative; z-index: 1;
-}
-.cell.win-cell::before {
-    content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
-    border: 2px solid gold; border-radius: 10px;
-    animation: winBorderPulse 0.7s infinite alternate ease-in-out;
-    z-index: -1;
-}
-
-@keyframes winPulse {
-    from { background-color: rgba(255, 215, 0, 0.45); transform: scale(1); }
-    to { background-color: rgba(255, 215, 0, 0.65); transform: scale(1.03); }
-}
-@keyframes winBorderPulse {
-     from { opacity: 0.5; }
-     to { opacity: 1; }
-}
+.cell.exploded { animation: explosion 0.6s ease-out forwards; cursor: not-allowed; }
+@keyframes explosion { 0% { transform: scale(1); background-color: #ffdddd;} 30% { transform: scale(1.15); background-color: #ffcccc; } 100% { transform: scale(1); background-color: var(--cell-bg); } }
+.cell.bomb-revealed.exploded { animation: bombExplosion 0.6s ease-out forwards; }
+@keyframes bombExplosion { 0% { transform: scale(1); background-color: #ffc8c8;} 30% { transform: scale(1.15); background-color: #ffaaaa; } 100% { transform: scale(1); background-color: var(--bomb-revealed-bg); } }
+.cell.win-cell { background-color: var(--win-highlight-bg); animation: winPulse 0.7s infinite alternate ease-in-out; position: relative; z-index: 1; }
+.cell.win-cell::before { content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border: 2px solid gold; border-radius: 10px; animation: winBorderPulse 0.7s infinite alternate ease-in-out; z-index: -1; }
+@keyframes winPulse { from { background-color: rgba(255, 215, 0, 0.45); transform: scale(1); } to { background-color: rgba(255, 215, 0, 0.65); transform: scale(1.03); } }
+@keyframes winBorderPulse { from { opacity: 0.5; } to { opacity: 1; } }
 
 /* --- Кнопки управления --- */
 .controls { margin-top: 20px; }
-
-#new-game-button {
-    padding: 14px 30px;
-    font-size: clamp(1rem, 3.5vw, 1.2rem);
-    background-color: var(--button-bg);
-    color: var(--button-text);
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
-    box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
-    font-weight: 500;
-}
-
-#new-game-button:hover:not(:disabled) {
-    background-color: var(--button-hover-bg);
-    box-shadow: 0 5px 12px rgba(0, 123, 255, 0.4);
-    transform: translateY(-1px);
-}
-#new-game-button:active:not(:disabled) {
-    transform: translateY(0px) scale(0.98);
-     box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
-}
-#new-game-button:disabled {
-    background-color: #cccccc; cursor: not-allowed; opacity: 0.6; box-shadow: none;
-}
-
-/* Анимация пульсации кнопки */
-@keyframes buttonPulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3); }
-    50% { transform: scale(1.04); box-shadow: 0 6px 14px rgba(0, 123, 255, 0.4); }
-}
+#new-game-button { padding: 14px 30px; font-size: clamp(1rem, 3.5vw, 1.2rem); background-color: var(--button-bg); color: var(--button-text); border: none; border-radius: 10px; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease; box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3); font-weight: 500; }
+#new-game-button:hover:not(:disabled) { background-color: var(--button-hover-bg); box-shadow: 0 5px 12px rgba(0, 123, 255, 0.4); transform: translateY(-1px); }
+#new-game-button:active:not(:disabled) { transform: translateY(0px) scale(0.98); box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3); }
+#new-game-button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.6; box-shadow: none; }
+@keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3); } 50% { transform: scale(1.04); box-shadow: 0 6px 14px rgba(0, 123, 255, 0.4); } }
 
 /* --- Адаптивность --- */
-@media (max-width: 380px) { /* Немного увеличил порог */
-     :root { --cell-size: min(max(40px, 12.5vw), 60px); } /* Корректировка для маленьких */
+@media (max-width: 380px) {
+     :root { --cell-size: min(max(40px, 12.5vw), 60px); }
     .game-container { padding: 15px; }
     h1 { font-size: 1.5rem; margin-bottom: 15px;}
     #new-game-button { padding: 12px 25px; }
-    .score-box { min-width: 100px; padding: 6px 10px; } /* Уменьшаем блоки счета */
+    .score-box { min-width: 100px; padding: 6px 10px; }
     .player-label { font-size: 0.8rem; }
     .score-number { font-size: 1.4rem; }
+    .status { padding: 5px 12px; font-size: 0.9rem;} /* Уменьшаем статус на маленьких экранах */
 }
