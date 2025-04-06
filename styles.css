@@ -21,6 +21,9 @@
 
     --cell-size: min(max(42px, 13vw), 65px);
     --cell-gap: 4px;
+
+    /* --- ЕДИНЫЙ ВЕРТИКАЛЬНЫЙ ОТСТУП --- */
+    --vertical-gap: 22px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -39,14 +42,19 @@ body {
 }
 .game-container.game-over-active #new-game-button:not(:disabled) { animation: buttonPulse 1.5s infinite ease-in-out; }
 
-h1 { font-size: clamp(1.6rem, 5.5vw, 2.2rem); margin-bottom: 20px; color: #2c3e50; font-weight: 600; }
+h1 {
+    font-size: clamp(1.6rem, 5.5vw, 2.2rem);
+    color: #2c3e50; font-weight: 600;
+    /* Единый отступ */
+    margin-bottom: var(--vertical-gap);
+}
 
 /* --- Стили Счетчика --- */
 .game-info {
-    /* Увеличен нижний отступ для пространства перед доской */
-    margin-bottom: 30px;
+    /* Единый отступ */
+    margin-bottom: var(--vertical-gap);
 }
-.score-container { display: flex; justify-content: space-around; align-items: center; margin-bottom: 18px; gap: 15px; }
+.score-container { display: flex; justify-content: space-around; align-items: center; margin-bottom: 18px; /* Внутренний отступ статуса можно оставить другим */ gap: 15px; }
 .score-box { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; border: 1px solid #e9ecef; min-width: 120px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .player-label { display: block; font-size: clamp(0.85rem, 2.8vw, 1rem); color: #495057; margin-bottom: 4px; font-weight: 500; }
 .score-number { display: block; font-size: clamp(1.5rem, 5vw, 1.8rem); font-weight: 700; color: #212529; transition: color 0.3s ease, transform 0.3s ease; transform: scale(1); }
@@ -60,21 +68,27 @@ h1 { font-size: clamp(1.6rem, 5.5vw, 2.2rem); margin-bottom: 20px; color: #2c3e5
     display: inline-block; max-width: 90%;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
-.status.thinking { /* Стили для "Бот думает", если нужны */ }
+.status.thinking {}
 .status.game-won { background-color: #ffc107; color: #333; font-weight: 600; }
 .status.game-draw { background-color: #6c757d; color: white; }
 .status.bomb-hit { background-color: var(--player-x-color); color: white; }
 
-.bomb-info { font-size: clamp(0.8rem, 2.6vw, 0.95rem); margin-top: 18px; color: #7f8c8d; }
+/* Информационная строка про бомбы */
+.bomb-info {
+    font-size: clamp(0.8rem, 2.6vw, 0.95rem);
+    color: #7f8c8d;
+    /* Единый отступ СВЕРХУ */
+    margin-top: var(--vertical-gap);
+}
 
 /* --- Игровое поле --- */
 .board {
     display: grid; gap: var(--cell-gap); background-color: var(--board-bg);
     border: 1px solid var(--cell-border); border-radius: 10px; margin: 0 auto;
     width: fit-content; padding: 6px;
-    /* УВЕЛИЧЕН нижний отступ, чтобы поднять кнопку */
-    margin-bottom: 30px;
     box-shadow: 0 4px 12px var(--board-shadow-color);
+    /* Единый отступ */
+    margin-bottom: var(--vertical-gap);
 }
 /* ... остальные стили .cell, анимации и т.д. остаются БЕЗ ИЗМЕНЕНИЙ ... */
 .cell { width: var(--cell-size); height: var(--cell-size); background-color: var(--cell-bg); border: 1px solid var(--cell-border); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: calc(var(--cell-size) * 0.65); font-weight: bold; cursor: pointer; transition: background-color 0.2s ease, transform 0.15s ease; user-select: none; position: relative; }
@@ -95,7 +109,9 @@ h1 { font-size: clamp(1.6rem, 5.5vw, 2.2rem); margin-bottom: 20px; color: #2c3e5
 @keyframes winBorderPulse { from { opacity: 0.5; } to { opacity: 1; } }
 
 /* --- Кнопки управления --- */
-.controls { margin-top: 20px; /* Отступ сверху кнопки можно оставить */ }
+.controls {
+    /* Убрали margin-top, отступ теперь задается .board margin-bottom */
+}
 /* ... стили #new-game-button и @keyframes buttonPulse без изменений ... */
 #new-game-button { padding: 14px 30px; font-size: clamp(1rem, 3.5vw, 1.2rem); background-color: var(--button-bg); color: var(--button-text); border: none; border-radius: 10px; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease; box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3); font-weight: 500; }
 #new-game-button:hover:not(:disabled) { background-color: var(--button-hover-bg); box-shadow: 0 5px 12px rgba(0, 123, 255, 0.4); transform: translateY(-1px); }
@@ -103,15 +119,17 @@ h1 { font-size: clamp(1.6rem, 5.5vw, 2.2rem); margin-bottom: 20px; color: #2c3e5
 #new-game-button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.6; box-shadow: none; }
 @keyframes buttonPulse { 0%, 100% { transform: scale(1); box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3); } 50% { transform: scale(1.04); box-shadow: 0 6px 14px rgba(0, 123, 255, 0.4); } }
 
-
 /* --- Адаптивность --- */
 @media (max-width: 380px) {
-     :root { --cell-size: min(max(40px, 12.5vw), 60px); }
+     :root {
+         --cell-size: min(max(40px, 12.5vw), 60px);
+         /* Уменьшенный единый отступ */
+         --vertical-gap: 18px;
+     }
     .game-container { padding: 15px; }
-    h1 { font-size: 1.5rem; margin-bottom: 15px;}
-    /* Уменьшаем отступы на маленьких экранах */
-    .game-info { margin-bottom: 25px; }
-    .board { margin-bottom: 30px; }
+    h1 { font-size: 1.5rem; } /* margin-bottom уже использует --vertical-gap */
+    /* .game-info, .board уже используют --vertical-gap */
+    /* .bomb-info уже использует --vertical-gap */
     #new-game-button { padding: 12px 25px; }
     .score-box { min-width: 100px; padding: 6px 10px; }
     .player-label { font-size: 0.8rem; }
