@@ -39,11 +39,7 @@ body {
     width: 100%; max-width: 500px; background-color: var(--container-bg);
     padding: clamp(15px, 4vw, 25px); border-radius: 16px;
     box-shadow: 0 6px 20px var(--shadow-color);
-    /* --- ИЗМЕНЕНИЯ ДЛЯ FLEXBOX ЦЕНТРИРОВАНИЯ --- */
-    display: flex;
-    flex-direction: column; /* Элементы друг под другом */
-    align-items: center; /* Горизонтальное центрирование всех дочерних элементов */
-    /* text-align: center; -- Убрали, т.к. align-items центрирует блоки */
+    display: flex; flex-direction: column; align-items: center;
 }
 .game-container.game-over-active #new-game-button:not(:disabled) { animation: buttonPulse 1.5s infinite ease-in-out; }
 
@@ -51,32 +47,33 @@ h1 {
     font-size: clamp(1.6rem, 5.5vw, 2.2rem);
     color: #2c3e50; font-weight: 600;
     margin-bottom: var(--vertical-gap);
-    text-align: center; /* Добавим на всякий случай, если текст не центрируется */
+    text-align: center;
 }
 
-/* --- Стили Счетчика --- */
+/* --- Стили Счетчика и Статуса --- */
 .game-info {
     margin-bottom: var(--vertical-gap);
-    width: 100%; /* Займет доступную ширину для центрирования контента */
-    /* text-align: center; -- Не нужно, т.к. score-container сам центрируется через flex */
+    width: 100%; /* Займет доступную ширину */
+    /* --- СДЕЛАНО FLEX ДЛЯ ЦЕНТРИРОВАНИЯ СТАТУСА --- */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
-.score-container { display: flex; justify-content: space-around; /* или space-evenly */ align-items: center; margin-bottom: 18px; gap: 15px; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; /* Центрируем сам контейнер счета */ }
-.score-box { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; border: 1px solid #e9ecef; flex-basis: 120px; /* Базовая ширина, позволит сжиматься */ flex-grow: 1; /* Позволит растягиваться */ max-width: 150px; /* Ограничение */ text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.score-container { display: flex; justify-content: space-around; align-items: center; margin-bottom: 18px; gap: 15px; width: 100%; max-width: 400px; /* Центрируется через align-items родителя */ }
+.score-box { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; border: 1px solid #e9ecef; flex-basis: 120px; flex-grow: 1; max-width: 150px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .player-label { display: block; font-size: clamp(0.85rem, 2.8vw, 1rem); color: #495057; margin-bottom: 4px; font-weight: 500; }
 .score-number { display: block; font-size: clamp(1.5rem, 5vw, 1.8rem); font-weight: 700; color: #212529; transition: color 0.3s ease, transform 0.3s ease; transform: scale(1); }
 .score-number.updated { transform: scale(1.15); color: var(--button-bg); }
 
-/* --- Стили Статуса --- */
 .status {
     min-height: auto; font-style: normal; color: var(--status-color);
     font-size: clamp(0.95rem, 3.1vw, 1.1rem); font-weight: 500;
     background-color: var(--status-bg); padding: 6px 15px; border-radius: 20px;
-    display: inline-block; max-width: 90%;
+    display: inline-block; /* Важно оставить inline-block или block */
+    max-width: 90%;
     transition: background-color 0.3s ease, color 0.3s ease;
-    /* Центрирование текста внутри статуса (на всякий случай) */
-    text-align: center;
+    text-align: center; /* Центрирование текста внутри */
 }
-/* Классы для разных состояний статуса */
 .status.thinking {}
 .status.game-won { background-color: #ffc107; color: #333; font-weight: 600; }
 .status.game-draw { background-color: #6c757d; color: white; }
@@ -87,7 +84,7 @@ h1 {
     font-size: clamp(0.8rem, 2.6vw, 0.95rem);
     color: #7f8c8d;
     margin-top: var(--vertical-gap);
-    text-align: center; /* Явно центрируем текст */
+    text-align: center;
 }
 
 /* --- Игровое поле --- */
@@ -97,9 +94,9 @@ h1 {
     width: fit-content; padding: 6px;
     box-shadow: 0 4px 12px var(--board-shadow-color);
     margin-bottom: var(--vertical-gap);
-    /* margin: 0 auto; -- УБРАЛИ, центрируется через align-items родителя */
+    /* Центрируется через align-items родителя */
 }
-/* ... остальные стили .cell, анимации и т.д. остаются БЕЗ ИЗМЕНЕНИЙ ... */
+/* ... остальные стили .cell, анимации и т.д. ... */
 .cell { width: var(--cell-size); height: var(--cell-size); background-color: var(--cell-bg); border: 1px solid var(--cell-border); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: calc(var(--cell-size) * 0.65); font-weight: bold; cursor: pointer; transition: background-color 0.2s ease, transform 0.15s ease; user-select: none; position: relative; }
 .cell:not(.x):not(.o):not(.bomb-revealed):not(.exploded):hover { background-color: var(--cell-hover-bg); transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .cell:not(.x):not(.o):not(.bomb-revealed):not(.exploded):active { transform: scale(0.92); background-color: #dce1e6; }
@@ -118,12 +115,7 @@ h1 {
 @keyframes winBorderPulse { from { opacity: 0.5; } to { opacity: 1; } }
 
 /* --- Кнопки управления --- */
-.controls {
-    /* Этот блок тоже будет центрирован через align-items родителя */
-    width: 100%; /* Позволяем кнопке внутри центрироваться, если нужно */
-    display: flex; /* Используем flex для центрирования кнопки внутри, если она не на всю ширину */
-    justify-content: center;
-}
+.controls { width: 100%; display: flex; justify-content: center; }
 /* ... стили #new-game-button и @keyframes buttonPulse без изменений ... */
 #new-game-button { padding: 14px 30px; font-size: clamp(1rem, 3.5vw, 1.2rem); background-color: var(--button-bg); color: var(--button-text); border: none; border-radius: 10px; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease; box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3); font-weight: 500; }
 #new-game-button:hover:not(:disabled) { background-color: var(--button-hover-bg); box-shadow: 0 5px 12px rgba(0, 123, 255, 0.4); transform: translateY(-1px); }
@@ -134,15 +126,12 @@ h1 {
 
 /* --- Адаптивность --- */
 @media (max-width: 380px) {
-     :root {
-         --cell-size: min(max(40px, 12.5vw), 60px);
-         --vertical-gap: 18px;
-     }
+     :root { --cell-size: min(max(40px, 12.5vw), 60px); --vertical-gap: 18px; }
     .game-container { padding: 15px; }
     h1 { font-size: 1.5rem; }
     #new-game-button { padding: 12px 25px; }
-    .score-container { max-width: none; /* Убираем ограничение на маленьких экранах */ }
-    .score-box { min-width: auto; flex-basis: 100px; padding: 6px 8px;} /* Адаптируем счет */
+    .score-container { max-width: none; }
+    .score-box { min-width: auto; flex-basis: 100px; padding: 6px 8px;}
     .player-label { font-size: 0.75rem; }
     .score-number { font-size: 1.3rem; }
     .status { padding: 5px 12px; font-size: 0.9rem;}
